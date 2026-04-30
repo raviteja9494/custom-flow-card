@@ -30,6 +30,7 @@ class CustomFlowCard extends HTMLElement {
         details_solar_savings: "sensor.v_guard_inverter_solar_savings_today",
         gateway_status: "sensor.v_guard_inverter_inverter_ble_status"
       },
+      grid_online_voltage_min: 90,
       icons: {
         grid: "mdi:transmission-tower",
         inverter: "mdi:power",
@@ -80,8 +81,8 @@ class CustomFlowCard extends HTMLElement {
         <div class="wrapper">
           <svg viewBox="0 0 100 100" class="flow-svg" role="img" aria-label="Power flow">
             <defs>
-              <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="2.2" markerHeight="2.2" refX="2" refY="1.1" orient="auto">
-                <path d="M0,0 L2.2,1.1 L0,2.2 z" fill="currentColor"></path>
+              <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="6.2" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 z" fill="var(--flow-arrow)"></path>
               </marker>
             </defs>
 
@@ -121,6 +122,7 @@ class CustomFlowCard extends HTMLElement {
             <div class="value" id="value-home"></div>
           </div>
         </div>
+        <div class="flow-status" id="flow-status"></div>
         <div class="details" id="details-row">
           <div class="detail"><span class="k">Out Today</span><span id="detail-today-energy">--</span></div>
           <div class="detail"><span class="k">Grid Today</span><span id="detail-grid-energy">--</span></div>
@@ -135,6 +137,7 @@ class CustomFlowCard extends HTMLElement {
           <div class="detail"><span class="k">Grid Calc</span><span id="detail-grid-calc">--</span></div>
           <div class="detail"><span class="k">Load Calc</span><span id="detail-load-calc">--</span></div>
           <div class="detail"><span class="k">Solar Calc</span><span id="detail-solar-calc">--</span></div>
+          <div class="detail"><span class="k">Battery Calc</span><span id="detail-battery-calc">--</span></div>
         </div>
       </ha-card>
       <style>
@@ -152,6 +155,7 @@ class CustomFlowCard extends HTMLElement {
           --flow-detail-bg: #ffffff;
           --flow-node-bg: #ffffff;
           --flow-border: rgba(76, 94, 124, 0.25);
+          --flow-arrow: #1f9d55;
           display: block;
         }
 
@@ -201,36 +205,37 @@ class CustomFlowCard extends HTMLElement {
         .flow-svg {
           width: 100%;
           height: 100%;
-          color: var(--flow-ok);
           opacity: 0.85;
           position: relative;
           z-index: 1;
         }
 
         .flow-line {
-          stroke: currentColor;
-          stroke-width: 1.2;
+          stroke: var(--line-color, var(--flow-ok));
+          stroke-width: 2.35;
           stroke-opacity: 0.9;
           stroke-linecap: round;
           marker-end: url(#arrow);
-          transition: opacity 0.25s ease;
-          opacity: 0.1;
+          transition: opacity 0.25s ease, stroke-width 0.25s ease;
+          opacity: 0.18;
+          filter: drop-shadow(0 0 2px rgba(31, 157, 85, 0.45));
         }
 
         .flow-line.active {
-          opacity: 0.6;
+          opacity: 0.95;
+          stroke-width: 2.7;
           animation: fadePulse 1.2s ease infinite;
         }
 
-        .flow-line.reverse {
-          marker-end: none;
-          marker-start: url(#arrow);
-        }
+        #line-grid-inverter { --line-color: var(--flow-grid); }
+        #line-solar-inverter { --line-color: var(--flow-solar); }
+        #line-battery-inverter { --line-color: var(--flow-battery); }
+        #line-inverter-home { --line-color: var(--flow-home); }
 
         @keyframes fadePulse {
-          0% { opacity: 0.45; }
-          50% { opacity: 0.7; }
-          100% { opacity: 0.45; }
+          0% { opacity: 0.72; }
+          50% { opacity: 1; }
+          100% { opacity: 0.72; }
         }
 
         .node {
@@ -282,6 +287,22 @@ class CustomFlowCard extends HTMLElement {
         .node-battery ha-icon { color: var(--flow-battery); }
         .node-home ha-icon { color: var(--flow-home); }
         .node-solar ha-icon { color: var(--flow-solar); }
+
+        .flow-status {
+          margin: 10px 12px 0;
+          min-height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          border-radius: 8px;
+          padding: 7px 10px;
+          background: var(--flow-detail-bg);
+          border: 1px solid var(--flow-border);
+          color: var(--flow-text);
+          font-size: 0.76rem;
+          line-height: 1.2rem;
+        }
 
         .details {
           border-top: 1px solid var(--flow-border);
@@ -360,14 +381,19 @@ class CustomFlowCard extends HTMLElement {
     const inverterOutputResult = this.resolveInverterOutputPower(entities, loadResult);
     const solarResult = this.resolveSolarPower(entities);
 
-    const gridPower = gridResult.power;
+    const rawGridPower = gridResult.power;
+    const gridOnline = this.isGridOnline(entities, rawGridPower, cfg.grid_online_voltage_min);
+    const gridPower = gridOnline ? rawGridPower : 0;
     const inverterOutputPower = inverterOutputResult.power;
     const loadPower = loadResult.power;
     const solarPower = solarResult.power;
     const batteryPercent = this.readNumber(entities.battery_percent);
     const batteryVoltage = this.readNumber(entities.battery_voltage);
 
-    const batteryPower = inverterOutputPower - (gridPower + solarPower);
+    const loadDemand = Number.isFinite(loadPower) && loadPower > 0 ? loadPower : inverterOutputPower;
+    const gridSupplyPower = Math.max(0, gridPower);
+    const solarSupplyPower = Math.max(0, solarPower);
+    const batteryPower = loadDemand - gridSupplyPower - solarSupplyPower;
     const batteryState = batteryPower > 10 ? "discharging" : batteryPower < -10 ? "charging" : "idle";
 
     this.setIcon("icon-grid", icons.grid || "mdi:transmission-tower");
@@ -385,10 +411,18 @@ class CustomFlowCard extends HTMLElement {
     this.setText("value-home", this.formatPower(loadPower));
     this.setText("value-solar", this.formatPower(solarPower));
 
-    this.setDetails(entities, gridResult, loadResult, solarResult);
+    this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower);
     this.updateGatewayStatus(entities);
+    this.updateFlowStatus({
+      gridOnline,
+      gridPower,
+      solarPower,
+      batteryPower,
+      batteryState,
+      loadDemand
+    });
 
-    this.applyFlow("line-grid-inverter", Math.abs(gridPower) > 5, gridPower < 0);
+    this.applyFlow("line-grid-inverter", gridOnline && Math.abs(gridPower) > 5, gridPower < 0);
     this.applyFlow("line-solar-inverter", solarPower > 5, false);
 
     if (batteryState === "charging") {
@@ -420,7 +454,7 @@ class CustomFlowCard extends HTMLElement {
     }
   }
 
-  setDetails(entities, gridResult, loadResult, solarResult) {
+  setDetails(entities, gridResult, loadResult, solarResult, batteryPower) {
     this.setText("detail-today-energy", this.formatStateValue(entities.details_today_energy));
     this.setText("detail-grid-energy", this.formatStateValue(entities.details_grid_energy));
     this.setText("detail-temp", this.formatStateValue(entities.details_temperature));
@@ -434,6 +468,38 @@ class CustomFlowCard extends HTMLElement {
     this.setText("detail-grid-calc", gridResult?.formulaText || "direct");
     this.setText("detail-load-calc", loadResult?.formulaText || "direct");
     this.setText("detail-solar-calc", solarResult?.formulaText || "direct");
+    this.setText("detail-battery-calc", this.formatBatteryPower(batteryPower));
+  }
+
+  updateFlowStatus({ gridOnline, gridPower, solarPower, batteryPower, batteryState, loadDemand }) {
+    const node = this.content.getElementById("flow-status");
+    if (!node) return;
+
+    const sources = [];
+    if (gridOnline && gridPower > 5) {
+      sources.push(`Grid ${this.formatPower(gridPower)}`);
+    }
+    if (solarPower > 5) {
+      sources.push(`Solar ${this.formatPower(solarPower)}`);
+    }
+    if (batteryState === "discharging") {
+      sources.push(`Battery ${this.formatPower(batteryPower)}`);
+    }
+
+    const prefix = !gridOnline ? "Mains cutoff | " : "";
+
+    if (batteryState === "charging") {
+      const excess = Math.abs(batteryPower);
+      node.textContent = `${prefix}${sources.join(" + ") || "Solar"} -> Load ${this.formatPower(loadDemand)} + Battery charging ${this.formatPower(excess)}`;
+      return;
+    }
+
+    if (sources.length) {
+      node.textContent = `${prefix}${sources.join(" + ")} -> Load ${this.formatPower(loadDemand)}`;
+      return;
+    }
+
+    node.textContent = gridOnline ? "No active load flow detected" : "Mains cutoff | Waiting for solar or battery flow";
   }
 
   formatStateValue(entityId) {
@@ -548,6 +614,22 @@ class CustomFlowCard extends HTMLElement {
     };
   }
 
+  isGridOnline(entities, gridPower, minVoltage) {
+    const threshold = Number.isFinite(Number(minVoltage)) ? Number(minVoltage) : 90;
+    const mainsVoltage = this.readNumber(entities.mains_voltage);
+
+    if (Number.isFinite(mainsVoltage)) {
+      return mainsVoltage >= threshold;
+    }
+
+    const gridVoltage = this.readNumber(entities.grid_voltage);
+    if (Number.isFinite(gridVoltage)) {
+      return gridVoltage >= threshold;
+    }
+
+    return Math.abs(gridPower) > 5;
+  }
+
   pickBestVoltage(entityIds) {
     for (const entityId of entityIds) {
       const value = this.readNumber(entityId);
@@ -616,13 +698,40 @@ class CustomFlowCard extends HTMLElement {
     return `${Math.round(value)} W`;
   }
 
+  formatBatteryPower(value) {
+    if (!Number.isFinite(value)) {
+      return "--";
+    }
+    if (value > 10) {
+      return `discharging ${this.formatPower(value)}`;
+    }
+    if (value < -10) {
+      return `charging ${this.formatPower(Math.abs(value))}`;
+    }
+    return "idle";
+  }
+
   applyFlow(id, active, reverse) {
     const line = this.content.getElementById(id);
     if (!line) {
       return;
     }
+    if (!line.dataset.baseX1) {
+      line.dataset.baseX1 = line.getAttribute("x1");
+      line.dataset.baseY1 = line.getAttribute("y1");
+      line.dataset.baseX2 = line.getAttribute("x2");
+      line.dataset.baseY2 = line.getAttribute("y2");
+    }
+
+    const x1 = line.dataset.baseX1;
+    const y1 = line.dataset.baseY1;
+    const x2 = line.dataset.baseX2;
+    const y2 = line.dataset.baseY2;
+    line.setAttribute("x1", reverse ? x2 : x1);
+    line.setAttribute("y1", reverse ? y2 : y1);
+    line.setAttribute("x2", reverse ? x1 : x2);
+    line.setAttribute("y2", reverse ? y1 : y2);
     line.classList.toggle("active", Boolean(active));
-    line.classList.toggle("reverse", Boolean(reverse));
   }
 }
 
@@ -698,6 +807,7 @@ class CustomFlowCardEditor extends HTMLElement {
           ["light", "Light (default)"],
           ["dark", "Dark"]
         ])}
+        ${this.field("grid_online_voltage_min", "Grid Online Voltage Min", cfg.grid_online_voltage_min ?? 90)}
 
         <div class="section">Flow Entities</div>
         ${this.field("entities.grid_power", "Grid Power (optional direct)", entities.grid_power || "")}
@@ -772,6 +882,13 @@ class CustomFlowCardEditor extends HTMLElement {
       next.title = value;
     } else if (path === "appearance") {
       next.appearance = value || "light";
+    } else if (path === "grid_online_voltage_min") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        next.grid_online_voltage_min = parsed;
+      } else {
+        delete next.grid_online_voltage_min;
+      }
     } else if (path.startsWith("entities.")) {
       const key = path.replace("entities.", "");
       next.entities = next.entities || {};
@@ -808,6 +925,7 @@ class CustomFlowCardEditor extends HTMLElement {
 
   getPathValue(path) {
     if (path === "title") return this._config?.title || "";
+    if (path === "grid_online_voltage_min") return this._config?.grid_online_voltage_min ?? "";
     if (!path.startsWith("entities.")) return "";
     const key = path.replace("entities.", "");
     return this._config?.entities?.[key] || "";

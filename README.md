@@ -42,6 +42,7 @@ In Settings -> Dashboards -> Resources, add:
 type: custom:custom-flow-card
 title: V-Guard Inverter Flow
 appearance: light
+grid_online_voltage_min: 90
 entities:
   grid_current: sensor.shellyplus2pm_b0b21c108704_output_0_current
   grid_voltage: sensor.shellyplus2pm_b0b21c108704_output_0_voltage
@@ -52,6 +53,15 @@ entities:
   battery_voltage: sensor.v_guard_inverter_battery_voltage
   solar_current: sensor.v_guard_inverter_solar_current
   mains_voltage: sensor.v_guard_inverter_mains_voltage
+  details_today_energy: sensor.inverter_out_energy
+  details_grid_energy: sensor.inverter_in_1_energy
+  details_temperature: sensor.v_guard_inverter_system_temperature
+  details_power_cuts_today: sensor.v_guard_inverter_power_cuts_today
+  details_ble_status: sensor.v_guard_inverter_inverter_ble_status
+  details_battery_remaining: sensor.v_guard_inverter_battery_remaining
+  details_cutoff_remaining: sensor.v_guard_inverter_cutoff_remaining
+  details_load_percentage: sensor.v_guard_inverter_load_percentage
+  details_solar_savings: sensor.v_guard_inverter_solar_savings_today
   gateway_status: sensor.v_guard_inverter_inverter_ble_status
 icons:
   grid: mdi:transmission-tower
@@ -85,6 +95,7 @@ You can still use YAML for advanced keys like custom icons.
 - `entities.solar_current` + (`entities.solar_voltage` or `entities.mains_voltage`) (recommended): card computes solar power as `A x V`.
 - `entities.battery_percent` (optional): Battery percentage label and icon.
 - `entities.battery_voltage` (optional): Extra battery metric label.
+- `grid_online_voltage_min` (optional): Voltage threshold for considering grid/mains available. Default is `90`, so mains cutoff hides the grid flow.
 - `entities.details_today_energy` (optional): Details strip item, output energy today.
 - `entities.details_grid_energy` (optional): Details strip item, grid energy today.
 - `entities.details_temperature` (optional): Details strip item, inverter/system temperature.
@@ -95,7 +106,8 @@ You can still use YAML for advanced keys like custom icons.
 ## Notes
 
 - Card supports positive and negative power direction on grid line.
-- Battery flow direction is inferred from power balance.
+- Battery flow direction is inferred from power balance: `load - grid supply - solar supply`.
+- When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show `Mains cutoff | Solar ... + Battery ... -> Load ...`.
 - `kW` values are automatically converted to `W` internally.
 - Node labels show both calculated output and formula source (example: `620 W | 2.69A x 230V`).
 - Direct power entity is used first when present; formula-based fallback is used when direct power is missing.
