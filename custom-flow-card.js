@@ -78,44 +78,44 @@ class CustomFlowCard extends HTMLElement {
         <div class="card-header" id="title"></div>
         <div class="status-badge" id="status-badge" hidden>Data source offline</div>
         <div class="wrapper">
-          <svg viewBox="0 0 360 210" class="flow-svg" role="img" aria-label="Power flow">
+          <svg viewBox="0 0 100 100" class="flow-svg" role="img" aria-label="Power flow">
             <defs>
               <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
                 <path d="M0,0 L8,4 L0,8 z" fill="currentColor"></path>
               </marker>
             </defs>
 
-            <line id="line-grid-inverter" x1="78" y1="105" x2="180" y2="105" class="flow-line"></line>
-            <line id="line-solar-inverter" x1="180" y1="28" x2="180" y2="85" class="flow-line"></line>
-            <line id="line-battery-inverter" x1="180" y1="125" x2="180" y2="185" class="flow-line"></line>
-            <line id="line-inverter-home" x1="180" y1="105" x2="282" y2="105" class="flow-line"></line>
+            <line id="line-grid-inverter" x1="20" y1="50" x2="50" y2="50" class="flow-line"></line>
+            <line id="line-solar-inverter" x1="50" y1="20" x2="50" y2="42" class="flow-line"></line>
+            <line id="line-battery-inverter" x1="50" y1="58" x2="50" y2="80" class="flow-line"></line>
+            <line id="line-inverter-home" x1="50" y1="50" x2="80" y2="50" class="flow-line"></line>
           </svg>
 
-          <div id="node-grid" class="node node-grid" style="left:18px;top:75px;">
+          <div id="node-grid" class="node node-grid" style="--x:20%;--y:50%;">
             <ha-icon id="icon-grid"></ha-icon>
             <div class="label">Grid</div>
             <div class="value" id="value-grid"></div>
           </div>
 
-          <div id="node-solar" class="node node-solar" style="left:145px;top:8px;">
+          <div id="node-solar" class="node node-solar" style="--x:50%;--y:17%;">
             <ha-icon id="icon-solar"></ha-icon>
             <div class="label">Solar</div>
             <div class="value" id="value-solar"></div>
           </div>
 
-          <div id="node-inverter" class="node node-inverter" style="left:145px;top:75px;">
+          <div id="node-inverter" class="node node-inverter" style="--x:50%;--y:50%;">
             <ha-icon id="icon-inverter"></ha-icon>
             <div class="label">Inverter</div>
             <div class="value" id="value-inverter"></div>
           </div>
 
-          <div id="node-battery" class="node node-battery" style="left:145px;top:142px;">
+          <div id="node-battery" class="node node-battery" style="--x:50%;--y:83%;">
             <ha-icon id="icon-battery"></ha-icon>
             <div class="label">Battery</div>
             <div class="value" id="value-battery"></div>
           </div>
 
-          <div id="node-home" class="node node-home" style="left:272px;top:75px;">
+          <div id="node-home" class="node node-home" style="--x:80%;--y:50%;">
             <ha-icon id="icon-home"></ha-icon>
             <div class="label">Load</div>
             <div class="value" id="value-home"></div>
@@ -136,7 +136,7 @@ class CustomFlowCard extends HTMLElement {
       </ha-card>
       <style>
         :host {
-          --flow-node-size: 70px;
+          --flow-node-size: 86px;
           --flow-ok: var(--success-color, #43a047);
           --flow-muted: var(--disabled-color, #8a8a8a);
           --flow-grid: #1e88e5;
@@ -148,6 +148,7 @@ class CustomFlowCard extends HTMLElement {
           --flow-text: #25324d;
           --flow-detail-bg: #ffffff;
           --flow-node-bg: #ffffff;
+          --flow-border: rgba(76, 94, 124, 0.25);
           display: block;
         }
 
@@ -156,13 +157,14 @@ class CustomFlowCard extends HTMLElement {
           --flow-text: #dbe4f5;
           --flow-detail-bg: #20293a;
           --flow-node-bg: var(--ha-card-background, var(--card-background-color));
+          --flow-border: rgba(157, 177, 214, 0.3);
         }
 
         .card-header {
-          font-size: 1.1rem;
+          font-size: 1.03rem;
           line-height: 1.4rem;
-          padding: 16px 16px 0;
-          font-weight: 500;
+          padding: 14px 16px 0;
+          font-weight: 600;
         }
 
         .status-badge {
@@ -184,12 +186,13 @@ class CustomFlowCard extends HTMLElement {
 
         .wrapper {
           position: relative;
-          height: 220px;
-          padding: 6px 10px 14px;
+          height: 320px;
+          padding: 10px;
           overflow: hidden;
           background: var(--flow-bg);
-          border-radius: 10px;
-          margin: 8px 12px 0;
+          border-radius: 16px;
+          margin: 10px 12px 0;
+          border: 1px solid var(--flow-border);
         }
 
         .flow-svg {
@@ -202,6 +205,7 @@ class CustomFlowCard extends HTMLElement {
         .flow-line {
           stroke: currentColor;
           stroke-width: 3.5;
+          stroke-opacity: 0.9;
           stroke-linecap: round;
           marker-end: url(#arrow);
           transition: opacity 0.25s ease;
@@ -226,11 +230,14 @@ class CustomFlowCard extends HTMLElement {
 
         .node {
           position: absolute;
+          left: var(--x);
+          top: var(--y);
+          transform: translate(-50%, -50%);
           width: var(--flow-node-size);
           min-height: var(--flow-node-size);
           border-radius: 50%;
           background: var(--flow-node-bg);
-          border: 2px solid var(--divider-color, rgba(128, 128, 128, 0.4));
+          border: 2px solid var(--flow-border);
           box-shadow: var(--ha-card-box-shadow, none);
           display: flex;
           flex-direction: column;
@@ -247,15 +254,15 @@ class CustomFlowCard extends HTMLElement {
         }
 
         .label {
-          font-size: 0.72rem;
+          font-size: 0.74rem;
           line-height: 1rem;
           opacity: 0.85;
           color: var(--flow-text);
         }
 
         .value {
-          font-size: 0.66rem;
-          line-height: 0.84rem;
+          font-size: 0.65rem;
+          line-height: 0.8rem;
           opacity: 0.95;
           word-break: break-word;
           color: var(--flow-text);
@@ -270,11 +277,11 @@ class CustomFlowCard extends HTMLElement {
         .node-solar ha-icon { color: var(--flow-solar); }
 
         .details {
-          border-top: 1px solid var(--divider-color, rgba(128, 128, 128, 0.35));
+          border-top: 1px solid var(--flow-border);
           margin: 0 12px 12px;
           padding-top: 10px;
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 8px;
         }
 
@@ -284,7 +291,7 @@ class CustomFlowCard extends HTMLElement {
           align-items: center;
           border-radius: 8px;
           background: var(--flow-detail-bg);
-          border: 1px solid var(--divider-color, rgba(128, 128, 128, 0.35));
+          border: 1px solid var(--flow-border);
           padding: 7px 6px;
           line-height: 1.15;
         }
@@ -305,24 +312,19 @@ class CustomFlowCard extends HTMLElement {
 
         @media (max-width: 480px) {
           :host {
-            --flow-node-size: 58px;
+            --flow-node-size: 68px;
           }
 
           .wrapper {
-            height: 250px;
-            padding: 6px 6px 10px;
+            height: 292px;
+            padding: 8px;
           }
 
-          #node-grid { left: 6px !important; top: 94px !important; }
-          #node-solar { left: 124px !important; top: 18px !important; }
-          #node-inverter { left: 124px !important; top: 94px !important; }
-          #node-battery { left: 124px !important; top: 170px !important; }
-          #node-home { left: 242px !important; top: 94px !important; }
-
-          .flow-svg {
-            transform: scale(0.88);
-            transform-origin: center;
-          }
+          #node-grid { --x: 16%; --y: 50%; }
+          #node-solar { --x: 50%; --y: 18%; }
+          #node-inverter { --x: 50%; --y: 50%; }
+          #node-battery { --x: 50%; --y: 82%; }
+          #node-home { --x: 84%; --y: 50%; }
 
           .details {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -341,7 +343,6 @@ class CustomFlowCard extends HTMLElement {
 
     const cfg = this._config;
     this.setAppearance(cfg.appearance || "light");
-    this.applyAppearanceColors(cfg.appearance || "light");
     const entities = cfg.entities || {};
     const icons = cfg.icons || {};
 
@@ -410,28 +411,6 @@ class CustomFlowCard extends HTMLElement {
     } else {
       host.removeAttribute("appearance");
     }
-  }
-
-  applyAppearanceColors(mode) {
-    const isDark = mode === "dark";
-    const detailBg = isDark ? "#253247" : "#ffffff";
-    const detailText = isDark ? "#dbe4f5" : "#25324d";
-    const wrapperBg = isDark ? "#181d29" : "#f8fafc";
-    const badge = this.content.getElementById("status-badge");
-    const wrapper = this.content.querySelector(".wrapper");
-
-    if (wrapper) {
-      wrapper.style.backgroundColor = wrapperBg;
-    }
-    if (badge) {
-      badge.style.color = isDark ? "#ffd18d" : "#8a4b00";
-    }
-    this.content.querySelectorAll(".detail").forEach((el) => {
-      el.style.backgroundColor = detailBg;
-    });
-    this.content.querySelectorAll(".detail span, .label, .value").forEach((el) => {
-      el.style.color = detailText;
-    });
   }
 
   setDetails(entities) {
