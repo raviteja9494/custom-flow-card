@@ -80,8 +80,8 @@ class CustomFlowCard extends HTMLElement {
         <div class="wrapper">
           <svg viewBox="0 0 100 100" class="flow-svg" role="img" aria-label="Power flow">
             <defs>
-              <marker id="arrow" markerWidth="5" markerHeight="5" refX="4.6" refY="2.5" orient="auto">
-                <path d="M0,0 L5,2.5 L0,5 z" fill="currentColor"></path>
+              <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="2.2" markerHeight="2.2" refX="2" refY="1.1" orient="auto">
+                <path d="M0,0 L2.2,1.1 L0,2.2 z" fill="currentColor"></path>
               </marker>
             </defs>
 
@@ -209,17 +209,17 @@ class CustomFlowCard extends HTMLElement {
 
         .flow-line {
           stroke: currentColor;
-          stroke-width: 2;
+          stroke-width: 1.2;
           stroke-opacity: 0.9;
           stroke-linecap: round;
           marker-end: url(#arrow);
           transition: opacity 0.25s ease;
-          opacity: 0.14;
+          opacity: 0.1;
         }
 
         .flow-line.active {
-          opacity: 0.75;
-          animation: pulse 1.2s ease infinite;
+          opacity: 0.6;
+          animation: fadePulse 1.2s ease infinite;
         }
 
         .flow-line.reverse {
@@ -227,10 +227,10 @@ class CustomFlowCard extends HTMLElement {
           marker-start: url(#arrow);
         }
 
-        @keyframes pulse {
-          0% { stroke-width: 2; }
-          50% { stroke-width: 2.8; }
-          100% { stroke-width: 2; }
+        @keyframes fadePulse {
+          0% { opacity: 0.45; }
+          50% { opacity: 0.7; }
+          100% { opacity: 0.45; }
         }
 
         .node {
