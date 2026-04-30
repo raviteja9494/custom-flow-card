@@ -31,7 +31,6 @@ class CustomFlowCard extends HTMLElement {
         gateway_status: "sensor.v_guard_inverter_inverter_ble_status"
       },
       grid_online_voltage_min: 90,
-      solar_day_target_kwh: 5,
       icons: {
         grid: "mdi:transmission-tower",
         inverter: "mdi:power",
@@ -80,11 +79,6 @@ class CustomFlowCard extends HTMLElement {
         <div class="card-header" id="title"></div>
         <div class="status-badge" id="status-badge" hidden>Data source offline</div>
         <div class="wrapper">
-          <div class="solar-day-mini" id="solar-day-mini" hidden>
-            <span id="solar-day-label">Solar today</span>
-            <strong id="solar-day-value">--</strong>
-            <div class="solar-day-bar"><span id="solar-day-bar"></span></div>
-          </div>
           <svg viewBox="0 0 100 100" class="flow-svg" role="img" aria-label="Power flow">
             <defs>
               <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="6.2" refY="3.5" orient="auto">
@@ -129,6 +123,15 @@ class CustomFlowCard extends HTMLElement {
           </div>
         </div>
         <div class="flow-status" id="flow-status"></div>
+        <div class="solar-current-panel" id="solar-current-panel" hidden>
+          <div class="solar-current-head">
+            <span>Solar current today</span>
+            <strong id="solar-current-peak">Peak --</strong>
+          </div>
+          <svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+            <polyline id="solar-current-line" points="" fill="none"></polyline>
+          </svg>
+        </div>
         <div class="flow-breakdown">
           <div class="breakdown-item solar"><span>Solar to load</span><strong id="breakdown-solar">--</strong></div>
           <div class="breakdown-item grid"><span>Grid to load</span><strong id="breakdown-grid">--</strong></div>
@@ -151,7 +154,7 @@ class CustomFlowCard extends HTMLElement {
           <div class="detail"><span class="k">Battery Calc</span><span id="detail-battery-calc">--</span></div>
           <div class="detail"><span class="k">In Power</span><span id="detail-in-power">--</span></div>
           <div class="detail"><span class="k">Out Power</span><span id="detail-out-power">--</span></div>
-          <div class="detail"><span class="k">In - Out</span><span id="detail-in-out-balance">--</span></div>
+          <div class="detail"><span class="k">Inv Consumption</span><span id="detail-inverter-consumption">--</span></div>
         </div>
       </ha-card>
       <style>
@@ -306,52 +309,6 @@ class CustomFlowCard extends HTMLElement {
           white-space: normal;
         }
 
-        .solar-day-mini {
-          position: absolute;
-          left: 50%;
-          top: 8px;
-          transform: translateX(-50%);
-          z-index: 3;
-          width: 118px;
-          border-radius: 8px;
-          border: 1px solid rgba(251, 192, 45, 0.52);
-          background: var(--flow-detail-bg);
-          color: var(--flow-text);
-          padding: 3px 7px 4px;
-          text-align: center;
-          box-sizing: border-box;
-          box-shadow: 0 1px 4px rgba(18, 30, 55, 0.1);
-        }
-
-        .solar-day-mini span {
-          display: none;
-          font-size: 0.58rem;
-          line-height: 0.75rem;
-          opacity: 0.72;
-        }
-
-        .solar-day-mini strong {
-          display: block;
-          font-size: 0.64rem;
-          line-height: 0.78rem;
-        }
-
-        .solar-day-bar {
-          height: 4px;
-          margin-top: 2px;
-          border-radius: 999px;
-          overflow: hidden;
-          background: rgba(251, 192, 45, 0.18);
-        }
-
-        .solar-day-bar span {
-          display: block;
-          height: 100%;
-          width: 0%;
-          border-radius: inherit;
-          background: var(--flow-solar);
-        }
-
         .flow-status {
           margin: 10px 12px 0;
           min-height: 32px;
@@ -366,6 +323,51 @@ class CustomFlowCard extends HTMLElement {
           color: var(--flow-text);
           font-size: 0.76rem;
           line-height: 1.2rem;
+        }
+
+        .solar-current-panel {
+          margin: 8px 12px 0;
+          border-radius: 8px;
+          border: 1px solid rgba(251, 192, 45, 0.52);
+          background: var(--flow-detail-bg);
+          color: var(--flow-text);
+          padding: 7px 9px;
+          box-sizing: border-box;
+        }
+
+        .solar-current-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 4px;
+          font-size: 0.66rem;
+          line-height: 0.9rem;
+        }
+
+        .solar-current-head span {
+          opacity: 0.72;
+        }
+
+        .solar-current-head strong {
+          font-size: 0.68rem;
+          white-space: nowrap;
+        }
+
+        .solar-current-panel svg {
+          display: block;
+          width: 100%;
+          height: 28px;
+          background: rgba(251, 192, 45, 0.08);
+          border-radius: 6px;
+        }
+
+        #solar-current-line {
+          stroke: var(--flow-solar);
+          stroke-width: 2.2;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          vector-effect: non-scaling-stroke;
         }
 
         .flow-breakdown {
@@ -459,12 +461,6 @@ class CustomFlowCard extends HTMLElement {
           #node-battery { --x: 50%; --y: 82%; }
           #node-home { --x: 84%; --y: 50%; }
 
-          .solar-day-mini {
-            top: 6px;
-            width: 108px;
-            padding: 3px 6px;
-          }
-
           .details {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
@@ -530,7 +526,7 @@ class CustomFlowCard extends HTMLElement {
     );
     this.setText("value-home", this.formatPower(loadDemand));
     this.setText("value-solar", this.formatPower(solarToLoad));
-    this.updateSolarTodayMini(entities, cfg.solar_day_target_kwh);
+    this.updateSolarCurrentGraph(entities.solar_current);
 
     this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower, rawGridPower, inverterOutputPower);
     this.updateGatewayStatus(entities);
@@ -605,27 +601,89 @@ class CustomFlowCard extends HTMLElement {
     this.setText("detail-battery-calc", this.formatBatteryPower(batteryPower));
     this.setText("detail-in-power", this.formatPower(inverterInputPower));
     this.setText("detail-out-power", this.formatPower(inverterOutputPower));
-    this.setText("detail-in-out-balance", this.formatInOutBalance(inverterInputPower - inverterOutputPower));
+    this.setText("detail-inverter-consumption", this.formatInverterConsumption(inverterInputPower, inverterOutputPower));
   }
 
-  updateSolarTodayMini(entities, targetKwh) {
-    const panel = this.content.getElementById("solar-day-mini");
-    if (!panel) return;
+  async updateSolarCurrentGraph(entityId) {
+    const panel = this.content.getElementById("solar-current-panel");
+    if (!panel || !entityId || !this._hass?.callApi) {
+      if (panel) panel.hidden = true;
+      return;
+    }
 
-    const energy = this.readEnergyKwh(entities.details_solar_savings);
-    if (!Number.isFinite(energy)) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cacheKey = `${entityId}|${today.toISOString().slice(0, 10)}`;
+    const now = Date.now();
+
+    if (this._solarCurrentGraph?.key === cacheKey && now - this._solarCurrentGraph.fetchedAt < 5 * 60 * 1000) {
+      this.renderSolarCurrentGraph(this._solarCurrentGraph.samples);
+      return;
+    }
+
+    if (this._solarCurrentGraphPending === cacheKey) {
+      return;
+    }
+    this._solarCurrentGraphPending = cacheKey;
+
+    try {
+      const start = encodeURIComponent(today.toISOString());
+      const end = encodeURIComponent(new Date().toISOString());
+      const entity = encodeURIComponent(entityId);
+      const history = await this._hass.callApi(
+        "GET",
+        `history/period/${start}?filter_entity_id=${entity}&end_time=${end}&minimal_response=1&significant_changes_only=0`
+      );
+      const raw = Array.isArray(history) && Array.isArray(history[0]) ? history[0] : [];
+      const samples = raw
+        .map((point) => ({
+          value: Number(point.state ?? point.s),
+          time: point.last_changed || point.last_updated || point.lu || point.lc
+        }))
+        .filter((point) => Number.isFinite(point.value) && point.time);
+
+      const current = this.readNumber(entityId);
+      if (Number.isFinite(current)) {
+        samples.push({ value: current, time: new Date().toISOString() });
+      }
+
+      this._solarCurrentGraph = { key: cacheKey, fetchedAt: now, samples };
+      this.renderSolarCurrentGraph(samples);
+    } catch (_err) {
+      panel.hidden = true;
+    } finally {
+      this._solarCurrentGraphPending = "";
+    }
+  }
+
+  renderSolarCurrentGraph(samples) {
+    const panel = this.content.getElementById("solar-current-panel");
+    const line = this.content.getElementById("solar-current-line");
+    if (!panel || !line || !Array.isArray(samples) || samples.length < 2) {
+      if (panel) panel.hidden = true;
+      return;
+    }
+
+    const values = samples.map((sample) => Math.max(0, sample.value));
+    const max = Math.max(...values);
+    if (!Number.isFinite(max) || max <= 0) {
       panel.hidden = true;
       return;
     }
 
-    const target = Number.isFinite(Number(targetKwh)) && Number(targetKwh) > 0 ? Number(targetKwh) : 5;
-    const percent = Math.max(0, Math.min(100, (energy / target) * 100));
+    const points = values
+      .map((value, index) => {
+        const x = samples.length === 1 ? 0 : (index / (samples.length - 1)) * 100;
+        const y = 26 - (value / max) * 23;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+    line.setAttribute("points", points);
+
+    const peakIndex = values.indexOf(max);
+    const peakTime = this.formatTime(samples[peakIndex]?.time);
+    this.setText("solar-current-peak", `Peak ${max.toFixed(2)} A${peakTime ? ` at ${peakTime}` : ""}`);
     panel.hidden = false;
-    this.setText("solar-day-value", `${energy.toFixed(2)} kWh`);
-    const bar = this.content.getElementById("solar-day-bar");
-    if (bar) {
-      bar.style.width = `${percent}%`;
-    }
   }
 
   updateBreakdown({ gridOnline, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower, batteryState, batteryPercent }) {
@@ -686,24 +744,6 @@ class CustomFlowCard extends HTMLElement {
       return value;
     }
     return `${value} ${unit}`;
-  }
-
-  readEnergyKwh(entityId) {
-    const state = this.readState(entityId);
-    if (!state) {
-      return NaN;
-    }
-
-    const value = Number(state.state);
-    if (!Number.isFinite(value)) {
-      return NaN;
-    }
-
-    const unit = String(state.attributes.unit_of_measurement || "").toLowerCase();
-    if (unit === "wh") {
-      return value / 1000;
-    }
-    return value;
   }
 
   updateGatewayStatus(entities) {
@@ -917,6 +957,17 @@ class CustomFlowCard extends HTMLElement {
     return `${Math.round(value)} W`;
   }
 
+  formatTime(value) {
+    if (!value) {
+      return "";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
   formatBatteryPower(value) {
     if (!Number.isFinite(value)) {
       return "--";
@@ -930,17 +981,18 @@ class CustomFlowCard extends HTMLElement {
     return "idle";
   }
 
-  formatInOutBalance(value) {
-    if (!Number.isFinite(value)) {
+  formatInverterConsumption(inputPower, outputPower) {
+    if (!Number.isFinite(inputPower) || !Number.isFinite(outputPower)) {
       return "--";
     }
-    if (value < -10) {
-      return `Backup ${this.formatPower(Math.abs(value))}`;
+    const consumption = inputPower - outputPower;
+    if (consumption > 10) {
+      return this.formatPower(consumption);
     }
-    if (value > 10) {
-      return `Surplus ${this.formatPower(value)}`;
+    if (outputPower > inputPower + 10) {
+      return "0 W (backup)";
     }
-    return "balanced";
+    return "0 W";
   }
 
   formatBatteryNodeValue(batteryState, batteryToLoad, batteryChargingPower, batteryPercent) {
@@ -1051,7 +1103,6 @@ class CustomFlowCardEditor extends HTMLElement {
           ["dark", "Dark"]
         ])}
         ${this.field("grid_online_voltage_min", "Grid Online Voltage Min", cfg.grid_online_voltage_min ?? 90)}
-        ${this.field("solar_day_target_kwh", "Solar Day Target kWh", cfg.solar_day_target_kwh ?? 5)}
 
         <div class="section">Flow Entities</div>
         ${this.field("entities.grid_power", "Grid Power (optional direct)", entities.grid_power || "")}
@@ -1133,13 +1184,6 @@ class CustomFlowCardEditor extends HTMLElement {
       } else {
         delete next.grid_online_voltage_min;
       }
-    } else if (path === "solar_day_target_kwh") {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        next.solar_day_target_kwh = parsed;
-      } else {
-        delete next.solar_day_target_kwh;
-      }
     } else if (path.startsWith("entities.")) {
       const key = path.replace("entities.", "");
       next.entities = next.entities || {};
@@ -1177,7 +1221,6 @@ class CustomFlowCardEditor extends HTMLElement {
   getPathValue(path) {
     if (path === "title") return this._config?.title || "";
     if (path === "grid_online_voltage_min") return this._config?.grid_online_voltage_min ?? "";
-    if (path === "solar_day_target_kwh") return this._config?.solar_day_target_kwh ?? "";
     if (!path.startsWith("entities.")) return "";
     const key = path.replace("entities.", "");
     return this._config?.entities?.[key] || "";
