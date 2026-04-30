@@ -1,0 +1,7 @@
+{
+  "name": "Custom Flow Card",
+  "content_in_root": false,
+  "render_readme": true,
+  "filename": "custom-flow-card.js",
+  "homeassistant": "2023.8.0"
+}
