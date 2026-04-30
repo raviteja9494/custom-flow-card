@@ -69,81 +69,64 @@ class CustomFlowCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 6;
+    return 5;
   }
 
   render() {
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `
       <ha-card>
-        <div class="card-top">
-          <div class="card-header" id="title"></div>
-          <div class="mode-pill" id="mode-pill">Reading sensors</div>
-        </div>
+        <div class="card-header" id="title"></div>
         <div class="status-badge" id="status-badge" hidden>Data source offline</div>
-        <div class="power-layout">
-          <div class="source-stack">
-            <div class="source-card source-grid" id="card-grid">
-              <div class="source-head">
-                <ha-icon id="icon-grid"></ha-icon>
-                <span>Grid / Mains</span>
-              </div>
-              <div class="source-power" id="value-grid"></div>
-              <div class="source-detail" id="detail-grid-role"></div>
-              <div class="meter"><span id="bar-grid"></span></div>
-            </div>
+        <div class="wrapper">
+          <svg viewBox="0 0 100 100" class="flow-svg" role="img" aria-label="Power flow">
+            <defs>
+              <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="6.2" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 z" fill="var(--flow-arrow)"></path>
+              </marker>
+            </defs>
 
-            <div class="source-card source-solar" id="card-solar">
-              <div class="source-head">
-                <ha-icon id="icon-solar"></ha-icon>
-                <span>Solar</span>
-              </div>
-              <div class="source-power" id="value-solar"></div>
-              <div class="source-detail" id="detail-solar-role"></div>
-              <div class="meter"><span id="bar-solar"></span></div>
-            </div>
+            <line id="line-grid-inverter" x1="20" y1="50" x2="50" y2="50" class="flow-line"></line>
+            <line id="line-solar-inverter" x1="50" y1="20" x2="50" y2="42" class="flow-line"></line>
+            <line id="line-battery-inverter" x1="50" y1="58" x2="50" y2="80" class="flow-line"></line>
+            <line id="line-inverter-home" x1="50" y1="50" x2="80" y2="50" class="flow-line"></line>
+          </svg>
+          <div id="chip-grid-flow" class="flow-chip chip-grid" style="--x:35%;--y:43%;">Grid -> Inverter: --</div>
+          <div id="chip-solar-flow" class="flow-chip chip-solar" style="--x:50%;--y:30%;">Solar -> Inverter: --</div>
+          <div id="chip-battery-flow" class="flow-chip chip-battery" style="--x:50%;--y:70%;">Battery -> Inverter: --</div>
+          <div id="chip-load-flow" class="flow-chip chip-load" style="--x:65%;--y:57%;">Inverter -> Load: --</div>
 
-            <div class="source-card source-battery" id="card-battery">
-              <div class="source-head">
-                <ha-icon id="icon-battery"></ha-icon>
-                <span>Battery</span>
-              </div>
-              <div class="source-power" id="value-battery"></div>
-              <div class="source-detail" id="detail-battery-role"></div>
-              <div class="meter"><span id="bar-battery"></span></div>
-            </div>
+          <div id="node-grid" class="node node-grid" style="--x:20%;--y:50%;">
+            <ha-icon id="icon-grid"></ha-icon>
+            <div class="label">Grid</div>
+            <div class="value" id="value-grid"></div>
           </div>
 
-          <div class="center-story">
-            <div class="inverter-chip">
-              <ha-icon id="icon-inverter"></ha-icon>
-              <div>
-                <span class="chip-label">Inverter output</span>
-                <strong id="value-inverter"></strong>
-              </div>
-            </div>
-            <div class="flow-status" id="flow-status"></div>
-            <div class="flow-list">
-              <div class="flow-row" id="row-solar">
-                <span class="from">Solar</span><span class="arrow">-></span><span class="to">Load</span><strong id="flow-solar">--</strong>
-              </div>
-              <div class="flow-row" id="row-grid">
-                <span class="from">Grid</span><span class="arrow">-></span><span class="to">Load</span><strong id="flow-grid">--</strong>
-              </div>
-              <div class="flow-row" id="row-battery">
-                <span class="from" id="battery-flow-from">Battery</span><span class="arrow">-></span><span class="to" id="battery-flow-to">Load</span><strong id="flow-battery">--</strong>
-              </div>
-            </div>
+          <div id="node-solar" class="node node-solar" style="--x:50%;--y:17%;">
+            <ha-icon id="icon-solar"></ha-icon>
+            <div class="label">Solar</div>
+            <div class="value" id="value-solar"></div>
           </div>
 
-          <div class="load-panel">
-            <div class="load-icon"><ha-icon id="icon-home"></ha-icon></div>
-            <span class="chip-label">Current load</span>
-            <strong id="value-home"></strong>
-            <div class="load-copy" id="load-copy"></div>
-            <div class="meter load-meter"><span id="bar-load"></span></div>
+          <div id="node-inverter" class="node node-inverter" style="--x:50%;--y:50%;">
+            <ha-icon id="icon-inverter"></ha-icon>
+            <div class="label">Inverter</div>
+            <div class="value" id="value-inverter"></div>
+          </div>
+
+          <div id="node-battery" class="node node-battery" style="--x:50%;--y:83%;">
+            <ha-icon id="icon-battery"></ha-icon>
+            <div class="label">Battery</div>
+            <div class="value" id="value-battery"></div>
+          </div>
+
+          <div id="node-home" class="node node-home" style="--x:80%;--y:50%;">
+            <ha-icon id="icon-home"></ha-icon>
+            <div class="label">Load</div>
+            <div class="value" id="value-home"></div>
           </div>
         </div>
+        <div class="flow-status" id="flow-status"></div>
         <div class="details" id="details-row">
           <div class="detail"><span class="k">Out Today</span><span id="detail-today-energy">--</span></div>
           <div class="detail"><span class="k">Grid Today</span><span id="detail-grid-energy">--</span></div>
@@ -163,59 +146,36 @@ class CustomFlowCard extends HTMLElement {
       </ha-card>
       <style>
         :host {
+          --flow-node-size: 84px;
           --flow-ok: var(--success-color, #43a047);
           --flow-muted: var(--disabled-color, #8a8a8a);
-          --flow-grid: #2563eb;
-          --flow-battery: #8b5cf6;
-          --flow-home: #ea580c;
-          --flow-solar: #d97706;
-          --flow-inverter: #0f766e;
+          --flow-grid: #1e88e5;
+          --flow-battery: #8e24aa;
+          --flow-home: #fb8c00;
+          --flow-solar: #fbc02d;
+          --flow-inverter: #3949ab;
           --flow-bg: #f8fafc;
           --flow-text: #25324d;
-          --flow-subtle: #5f6f89;
           --flow-detail-bg: #ffffff;
+          --flow-node-bg: #ffffff;
           --flow-border: rgba(76, 94, 124, 0.25);
+          --flow-arrow: #1f9d55;
           display: block;
         }
 
         :host([appearance="dark"]) {
           --flow-bg: #181d29;
           --flow-text: #dbe4f5;
-          --flow-subtle: #aebbd1;
           --flow-detail-bg: #20293a;
+          --flow-node-bg: var(--ha-card-background, var(--card-background-color));
           --flow-border: rgba(157, 177, 214, 0.3);
-        }
-
-        ha-card {
-          overflow: hidden;
-        }
-
-        .card-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          padding: 14px 16px 0;
         }
 
         .card-header {
           font-size: 1.03rem;
           line-height: 1.4rem;
+          padding: 14px 16px 0;
           font-weight: 600;
-          color: var(--primary-text-color, var(--flow-text));
-        }
-
-        .mode-pill {
-          flex: 0 0 auto;
-          max-width: 48%;
-          border-radius: 999px;
-          border: 1px solid var(--flow-border);
-          padding: 5px 9px;
-          color: var(--flow-text);
-          background: var(--flow-detail-bg);
-          font-size: 0.68rem;
-          line-height: 0.95rem;
-          text-align: center;
         }
 
         .status-badge {
@@ -235,197 +195,148 @@ class CustomFlowCard extends HTMLElement {
           border-color: #81541f;
         }
 
-        .power-layout {
-          display: grid;
-          grid-template-columns: minmax(118px, 0.9fr) minmax(150px, 1.15fr) minmax(118px, 0.9fr);
-          gap: 10px;
-          align-items: stretch;
-          background: var(--flow-bg);
-          border-radius: 14px;
-          margin: 10px 12px 0;
+        .wrapper {
+          position: relative;
+          height: 360px;
           padding: 10px;
+          overflow: hidden;
+          background: var(--flow-bg);
+          border-radius: 16px;
+          margin: 10px 12px 0;
           border: 1px solid var(--flow-border);
         }
 
-        .source-stack,
-        .center-story,
-        .load-panel {
+        .flow-svg {
+          width: 100%;
+          height: 100%;
+          opacity: 0.85;
+          position: relative;
+          z-index: 1;
+        }
+
+        .flow-line {
+          stroke: var(--line-color, var(--flow-ok));
+          stroke-width: 2.35;
+          stroke-opacity: 0.9;
+          stroke-linecap: round;
+          marker-end: url(#arrow);
+          transition: opacity 0.25s ease, stroke-width 0.25s ease;
+          opacity: 0.18;
+          filter: drop-shadow(0 0 2px rgba(31, 157, 85, 0.45));
+        }
+
+        .flow-line.active {
+          opacity: 0.95;
+          stroke-width: 2.7;
+          animation: fadePulse 1.2s ease infinite;
+        }
+
+        #line-grid-inverter { --line-color: var(--flow-grid); }
+        #line-solar-inverter { --line-color: var(--flow-solar); }
+        #line-battery-inverter { --line-color: var(--flow-battery); }
+        #line-inverter-home { --line-color: var(--flow-home); }
+
+        @keyframes fadePulse {
+          0% { opacity: 0.72; }
+          50% { opacity: 1; }
+          100% { opacity: 0.72; }
+        }
+
+        .node {
+          position: absolute;
+          left: var(--x);
+          top: var(--y);
+          transform: translate(-50%, -50%);
+          z-index: 2;
+          width: var(--flow-node-size);
+          min-height: var(--flow-node-size);
+          border-radius: 50%;
+          background: var(--flow-node-bg);
+          border: 2px solid var(--flow-border);
+          box-shadow: var(--ha-card-box-shadow, none);
           display: flex;
           flex-direction: column;
-          gap: 8px;
-        }
-
-        .source-card,
-        .center-story,
-        .load-panel {
-          border: 1px solid var(--flow-border);
-          border-radius: 8px;
-          background: var(--flow-detail-bg);
-          color: var(--flow-text);
-        }
-
-        .source-card {
-          min-height: 86px;
-          padding: 9px;
-          box-sizing: border-box;
-          opacity: 0.72;
-          transition: opacity 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-        }
-
-        .source-card.active {
-          opacity: 1;
-          transform: translateY(-1px);
-        }
-
-        .source-grid.active { border-color: rgba(37, 99, 235, 0.58); }
-        .source-solar.active { border-color: rgba(217, 119, 6, 0.58); }
-        .source-battery.active { border-color: rgba(139, 92, 246, 0.58); }
-
-        .source-head {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 0.75rem;
-          line-height: 1rem;
-          color: var(--flow-subtle);
-        }
-
-        .source-head ha-icon {
-          --mdc-icon-size: 18px;
-        }
-
-        .source-power,
-        .load-panel strong,
-        .inverter-chip strong {
-          display: block;
-          margin-top: 6px;
-          font-size: 1.08rem;
-          line-height: 1.25rem;
-          color: var(--flow-text);
-        }
-
-        .source-detail,
-        .load-copy,
-        .chip-label {
-          margin-top: 3px;
-          font-size: 0.68rem;
-          line-height: 0.95rem;
-          color: var(--flow-subtle);
-        }
-
-        .meter {
-          margin-top: 8px;
-          width: 100%;
-          height: 6px;
-          border-radius: 999px;
-          background: rgba(100, 116, 139, 0.16);
-          overflow: hidden;
-        }
-
-        .meter span {
-          display: block;
-          width: 0%;
-          height: 100%;
-          border-radius: inherit;
-          transition: width 0.25s ease;
-        }
-
-        #bar-grid { background: var(--flow-grid); }
-        #bar-solar { background: var(--flow-solar); }
-        #bar-battery { background: var(--flow-battery); }
-        #bar-load { background: var(--flow-home); }
-
-        .source-grid ha-icon { color: var(--flow-grid); }
-        .source-solar ha-icon { color: var(--flow-solar); }
-        .source-battery ha-icon { color: var(--flow-battery); }
-        .load-panel ha-icon { color: var(--flow-home); }
-        .inverter-chip ha-icon { color: var(--flow-inverter); }
-
-        .center-story {
-          justify-content: space-between;
-          padding: 10px;
-        }
-
-        .inverter-chip {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding-bottom: 8px;
-          border-bottom: 1px solid var(--flow-border);
-        }
-
-        .inverter-chip ha-icon {
-          --mdc-icon-size: 24px;
-        }
-
-        .flow-status {
-          min-height: 42px;
-          padding: 4px 0;
-          font-size: 0.84rem;
-          line-height: 1.2rem;
-          font-weight: 600;
-        }
-
-        .flow-list {
-          display: grid;
-          gap: 6px;
-        }
-
-        .flow-row {
-          display: grid;
-          grid-template-columns: minmax(44px, 1fr) 22px minmax(38px, 1fr) minmax(58px, auto);
-          align-items: center;
-          gap: 5px;
-          min-height: 30px;
-          border-radius: 8px;
-          padding: 5px 7px;
-          background: rgba(100, 116, 139, 0.1);
-          color: var(--flow-subtle);
-          font-size: 0.7rem;
-          line-height: 0.9rem;
-          opacity: 0.6;
-        }
-
-        .flow-row.active {
-          opacity: 1;
-          color: var(--flow-text);
-        }
-
-        .flow-row .arrow {
-          color: var(--flow-ok);
-          font-weight: 800;
-          text-align: center;
-        }
-
-        .flow-row strong {
-          font-size: 0.78rem;
-          color: var(--flow-text);
-          text-align: right;
-          white-space: nowrap;
-        }
-
-        .load-panel {
           align-items: center;
           justify-content: center;
           text-align: center;
-          padding: 12px 10px;
+          padding: 6px;
+          box-sizing: border-box;
         }
 
-        .load-icon {
-          width: 42px;
-          height: 42px;
-          border-radius: 50%;
-          display: grid;
-          place-items: center;
-          background: rgba(234, 88, 12, 0.12);
+        .node ha-icon {
+          --mdc-icon-size: 20px;
+          margin-bottom: 4px;
         }
 
-        .load-icon ha-icon {
-          --mdc-icon-size: 24px;
+        .label {
+          font-size: 0.74rem;
+          line-height: 1rem;
+          opacity: 0.85;
+          color: var(--flow-text);
         }
 
-        .load-meter {
-          max-width: 110px;
+        .value {
+          font-size: 0.64rem;
+          line-height: 0.8rem;
+          opacity: 0.95;
+          white-space: normal;
+          overflow: hidden;
+          max-width: 92%;
+          color: var(--flow-text);
+        }
+
+        .node-grid ha-icon { color: var(--flow-grid); }
+        .node-inverter ha-icon { color: var(--flow-inverter); }
+        .node-battery ha-icon { color: var(--flow-battery); }
+        .node-home ha-icon { color: var(--flow-home); }
+        .node-solar ha-icon { color: var(--flow-solar); }
+
+        .flow-chip {
+          position: absolute;
+          left: var(--x);
+          top: var(--y);
+          transform: translate(-50%, -50%);
+          z-index: 3;
+          max-width: 178px;
+          border-radius: 999px;
+          padding: 4px 8px;
+          background: var(--flow-detail-bg);
+          border: 1px solid var(--flow-border);
+          color: var(--flow-text);
+          font-size: 0.62rem;
+          line-height: 0.82rem;
+          text-align: center;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          opacity: 0.62;
+          box-shadow: 0 1px 4px rgba(18, 30, 55, 0.12);
+        }
+
+        .flow-chip.active {
+          opacity: 1;
+          font-weight: 600;
+        }
+
+        .chip-grid.active { border-color: var(--flow-grid); }
+        .chip-solar.active { border-color: var(--flow-solar); }
+        .chip-battery.active { border-color: var(--flow-battery); }
+        .chip-load.active { border-color: var(--flow-home); }
+
+        .flow-status {
+          margin: 10px 12px 0;
+          min-height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          border-radius: 8px;
+          padding: 7px 10px;
+          background: var(--flow-detail-bg);
+          border: 1px solid var(--flow-border);
+          color: var(--flow-text);
+          font-size: 0.76rem;
+          line-height: 1.2rem;
         }
 
         .details {
@@ -463,17 +374,30 @@ class CustomFlowCard extends HTMLElement {
         }
 
         @media (max-width: 480px) {
-          .card-top {
-            align-items: flex-start;
-            flex-direction: column;
+          :host {
+            --flow-node-size: 76px;
           }
 
-          .mode-pill {
-            max-width: 100%;
+          .wrapper {
+            height: 292px;
+            padding: 8px;
           }
 
-          .power-layout {
-            grid-template-columns: 1fr;
+          #node-grid { --x: 16%; --y: 50%; }
+          #node-solar { --x: 50%; --y: 18%; }
+          #node-inverter { --x: 50%; --y: 50%; }
+          #node-battery { --x: 50%; --y: 82%; }
+          #node-home { --x: 84%; --y: 50%; }
+
+          #chip-grid-flow { --x: 33%; --y: 41%; }
+          #chip-solar-flow { --x: 50%; --y: 31%; }
+          #chip-battery-flow { --x: 50%; --y: 70%; }
+          #chip-load-flow { --x: 67%; --y: 60%; }
+
+          .flow-chip {
+            max-width: 142px;
+            font-size: 0.58rem;
+            padding: 3px 6px;
           }
 
           .details {
@@ -530,30 +454,51 @@ class CustomFlowCard extends HTMLElement {
     this.setIcon("icon-home", icons.home || "mdi:home-lightning-bolt");
     this.setIcon("icon-solar", icons.solar || "mdi:solar-power");
 
-    this.setText("value-grid", this.formatPower(gridPower));
+    this.setText("value-grid", gridOnline ? this.formatPower(gridToLoad) : "Cutoff");
     this.setText("value-inverter", this.formatPower(inverterOutputPower));
     this.setText(
       "value-battery",
-      `${this.safePercent(batteryPercent)}${Number.isFinite(batteryVoltage) ? ` | ${batteryVoltage.toFixed(1)}V` : ""}`
+      this.formatBatteryNodeValue(batteryState, batteryToLoad, batteryChargingPower, batteryPercent)
     );
     this.setText("value-home", this.formatPower(loadDemand));
-    this.setText("value-solar", this.formatPower(solarPower));
+    this.setText("value-solar", this.formatPower(solarToLoad));
 
     this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower);
     this.updateGatewayStatus(entities);
-    this.updatePowerCards({
+    this.updateFlowStatus({
       gridOnline,
+      gridPower,
+      solarPower,
+      batteryPower,
       batteryState,
-      batteryPercent,
-      batteryVoltage,
       loadDemand,
-      loadPower,
-      inverterOutputPower,
       solarToLoad,
       gridToLoad,
       batteryToLoad,
       batteryChargingPower
     });
+    this.updateFlowChips({
+      gridOnline,
+      loadDemand,
+      solarToLoad,
+      gridToLoad,
+      batteryToLoad,
+      batteryChargingPower,
+      batteryState
+    });
+
+    this.applyFlow("line-grid-inverter", gridOnline && gridToLoad > 5, gridPower < 0);
+    this.applyFlow("line-solar-inverter", solarPower > 5, false);
+
+    if (batteryState === "charging") {
+      this.applyFlow("line-battery-inverter", true, false);
+    } else if (batteryState === "discharging") {
+      this.applyFlow("line-battery-inverter", true, true);
+    } else {
+      this.applyFlow("line-battery-inverter", false, false);
+    }
+
+    this.applyFlow("line-inverter-home", loadDemand > 5, false);
   }
 
   readState(entityId) {
@@ -591,171 +536,45 @@ class CustomFlowCard extends HTMLElement {
     this.setText("detail-battery-calc", this.formatBatteryPower(batteryPower));
   }
 
-  updatePowerCards({
-    gridOnline,
-    batteryState,
-    batteryPercent,
-    batteryVoltage,
-    loadDemand,
-    loadPower,
-    inverterOutputPower,
-    solarToLoad,
-    gridToLoad,
-    batteryToLoad,
-    batteryChargingPower
-  }) {
-    const loadForPercent = Math.max(1, loadDemand || loadPower || inverterOutputPower || 0);
-    const sourceMax = Math.max(loadForPercent, gridToLoad, solarToLoad, batteryToLoad, batteryChargingPower);
-
-    this.setText("value-grid", gridOnline ? this.formatPower(gridToLoad) : "0 W");
-    this.setText("value-solar", this.formatPower(solarToLoad));
-    this.setText("detail-grid-role", gridOnline ? `${this.formatPower(gridToLoad)} feeding load` : "Mains cutoff");
-    this.setText("detail-solar-role", solarToLoad > 5 ? `${this.formatPower(solarToLoad)} feeding load` : "No useful solar now");
-    this.setText("detail-battery-role", this.describeBatteryRole(batteryState, batteryToLoad, batteryChargingPower, batteryPercent, batteryVoltage));
-    this.setText("load-copy", this.describeLoad(loadDemand, solarToLoad, gridToLoad, batteryToLoad));
-    this.setText("value-battery", this.formatBatteryTilePower(batteryState, batteryToLoad, batteryChargingPower));
-
-    this.setBar("bar-grid", gridToLoad, sourceMax);
-    this.setBar("bar-solar", solarToLoad, sourceMax);
-    this.setBar("bar-battery", batteryState === "charging" ? batteryChargingPower : batteryToLoad, sourceMax);
-    this.setBar("bar-load", loadDemand, sourceMax);
-
-    this.setActive("card-grid", gridOnline && gridToLoad > 5);
-    this.setActive("card-solar", solarToLoad > 5);
-    this.setActive("card-battery", batteryToLoad > 5 || batteryChargingPower > 5);
-    this.setText("mode-pill", this.describeMode(gridOnline, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower));
-
-    this.setFlowRow("row-solar", "flow-solar", solarToLoad, solarToLoad > 5);
-    this.setFlowRow("row-grid", "flow-grid", gridToLoad, gridOnline && gridToLoad > 5);
-
-    const batteryFlowFrom = this.content.getElementById("battery-flow-from");
-    const batteryFlowTo = this.content.getElementById("battery-flow-to");
-    if (batteryState === "charging") {
-      if (batteryFlowFrom) batteryFlowFrom.textContent = "Surplus";
-      if (batteryFlowTo) batteryFlowTo.textContent = "Battery";
-      this.setFlowRow("row-battery", "flow-battery", batteryChargingPower, batteryChargingPower > 5);
-    } else {
-      if (batteryFlowFrom) batteryFlowFrom.textContent = "Battery";
-      if (batteryFlowTo) batteryFlowTo.textContent = "Load";
-      this.setFlowRow("row-battery", "flow-battery", batteryToLoad, batteryToLoad > 5);
-    }
-
-    this.updateFlowStatus({
-      gridOnline,
-      gridToLoad,
-      solarToLoad,
-      batteryToLoad,
-      batteryChargingPower,
-      batteryState,
-      loadDemand
-    });
-  }
-
-  updateFlowStatus({ gridOnline, gridToLoad, solarToLoad, batteryToLoad, batteryChargingPower, batteryState, loadDemand }) {
+  updateFlowStatus({ gridOnline, gridPower, solarPower, batteryPower, batteryState, loadDemand, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower }) {
     const node = this.content.getElementById("flow-status");
     if (!node) return;
 
     const sources = [];
     if (solarToLoad > 5) {
-      sources.push(`solar is giving ${this.formatPower(solarToLoad)}`);
+      sources.push(`solar ${this.formatPower(solarToLoad)}`);
     }
     if (gridOnline && gridToLoad > 5) {
-      sources.push(`grid is giving ${this.formatPower(gridToLoad)}`);
+      sources.push(`grid ${this.formatPower(gridToLoad)}`);
     }
     if (batteryToLoad > 5) {
-      sources.push(`battery is giving ${this.formatPower(batteryToLoad)}`);
+      sources.push(`battery ${this.formatPower(batteryToLoad)}`);
     }
 
-    const prefix = !gridOnline ? "Mains is cut off. " : "";
+    const prefix = !gridOnline ? "Mains cutoff | " : "";
 
     if (batteryState === "charging") {
-      node.textContent = `${prefix}${sources.join(", ") || "Load is covered"}; extra ${this.formatPower(batteryChargingPower)} is charging the battery.`;
+      node.textContent = `${prefix}Load ${this.formatPower(loadDemand)} from ${sources.join(" + ") || "available supply"}; extra ${this.formatPower(batteryChargingPower)} charges battery`;
       return;
     }
 
     if (sources.length) {
-      node.textContent = `${prefix}Load needs ${this.formatPower(loadDemand)}; ${sources.join(", ")}.`;
+      node.textContent = `${prefix}Load ${this.formatPower(loadDemand)} from ${sources.join(" + ")}`;
       return;
     }
 
-    node.textContent = gridOnline ? "No active load flow detected." : "Mains is cut off. Waiting for solar or battery flow.";
+    node.textContent = gridOnline ? "No active load flow detected" : "Mains cutoff | Waiting for solar or battery flow";
   }
 
-  describeMode(gridOnline, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower) {
-    if (!gridOnline && solarToLoad > 5 && batteryToLoad > 5) {
-      return "Backup: solar + battery";
-    }
-    if (!gridOnline && batteryToLoad > 5) {
-      return "Backup: battery";
-    }
-    if (!gridOnline && solarToLoad > 5) {
-      return "Backup: solar";
-    }
-    if (batteryChargingPower > 5) {
-      return "Battery charging";
-    }
-    if (solarToLoad > 5 && gridToLoad > 5) {
-      return "Solar + grid";
-    }
-    if (solarToLoad > 5) {
-      return "Solar running load";
-    }
-    if (gridToLoad > 5) {
-      return "Grid running load";
-    }
-    return gridOnline ? "Idle" : "Mains cutoff";
-  }
+  updateFlowChips({ gridOnline, loadDemand, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower, batteryState }) {
+    this.setFlowChip("chip-solar-flow", `Solar -> Inverter: ${this.formatPower(solarToLoad)}`, solarToLoad > 5);
+    this.setFlowChip("chip-grid-flow", gridOnline ? `Grid -> Inverter: ${this.formatPower(gridToLoad)}` : "Grid: mains cutoff", gridOnline && gridToLoad > 5);
+    this.setFlowChip("chip-load-flow", `Inverter -> Load: ${this.formatPower(loadDemand)}`, loadDemand > 5);
 
-  describeBatteryRole(batteryState, batteryToLoad, batteryChargingPower, batteryPercent, batteryVoltage) {
-    const batteryMeta = [
-      Number.isFinite(batteryPercent) ? this.safePercent(batteryPercent) : "",
-      Number.isFinite(batteryVoltage) ? `${batteryVoltage.toFixed(1)}V` : ""
-    ].filter(Boolean).join(" | ");
-
-    if (batteryState === "discharging" && batteryToLoad > 5) {
-      return `${this.formatPower(batteryToLoad)} helping load${batteryMeta ? ` | ${batteryMeta}` : ""}`;
-    }
-    if (batteryState === "charging" && batteryChargingPower > 5) {
-      return `${this.formatPower(batteryChargingPower)} charging${batteryMeta ? ` | ${batteryMeta}` : ""}`;
-    }
-    return `Idle${batteryMeta ? ` | ${batteryMeta}` : ""}`;
-  }
-
-  formatBatteryTilePower(batteryState, batteryToLoad, batteryChargingPower) {
-    if (batteryState === "discharging" && batteryToLoad > 5) {
-      return this.formatPower(batteryToLoad);
-    }
-    if (batteryState === "charging" && batteryChargingPower > 5) {
-      return `+${this.formatPower(batteryChargingPower)}`;
-    }
-    return "0 W";
-  }
-
-  describeLoad(loadDemand, solarToLoad, gridToLoad, batteryToLoad) {
-    const parts = [];
-    if (solarToLoad > 5) parts.push(`solar ${this.formatPower(solarToLoad)}`);
-    if (gridToLoad > 5) parts.push(`grid ${this.formatPower(gridToLoad)}`);
-    if (batteryToLoad > 5) parts.push(`battery ${this.formatPower(batteryToLoad)}`);
-    if (!parts.length) return "No meaningful consumption right now";
-    return `${this.formatPower(loadDemand)} supplied by ${parts.join(" + ")}`;
-  }
-
-  setFlowRow(rowId, valueId, power, active) {
-    this.setText(valueId, active ? this.formatPower(power) : "0 W");
-    this.setActive(rowId, active);
-  }
-
-  setBar(id, value, max) {
-    const node = this.content.getElementById(id);
-    if (!node) return;
-    const percent = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
-    node.style.width = `${percent}%`;
-  }
-
-  setActive(id, active) {
-    const node = this.content.getElementById(id);
-    if (node) {
-      node.classList.toggle("active", Boolean(active));
+    if (batteryState === "charging") {
+      this.setFlowChip("chip-battery-flow", `Inverter -> Battery: ${this.formatPower(batteryChargingPower)}`, batteryChargingPower > 5);
+    } else {
+      this.setFlowChip("chip-battery-flow", `Battery -> Inverter: ${this.formatPower(batteryToLoad)}`, batteryToLoad > 5);
     }
   }
 
@@ -966,6 +785,25 @@ class CustomFlowCard extends HTMLElement {
       return `charging ${this.formatPower(Math.abs(value))}`;
     }
     return "idle";
+  }
+
+  formatBatteryNodeValue(batteryState, batteryToLoad, batteryChargingPower, batteryPercent) {
+    const percent = this.safePercent(batteryPercent);
+    if (batteryState === "discharging" && batteryToLoad > 5) {
+      return `${this.formatPower(batteryToLoad)} out | ${percent}`;
+    }
+    if (batteryState === "charging" && batteryChargingPower > 5) {
+      return `${this.formatPower(batteryChargingPower)} in | ${percent}`;
+    }
+    return percent;
+  }
+
+  setFlowChip(id, text, active) {
+    this.setText(id, text);
+    const node = this.content.getElementById(id);
+    if (node) {
+      node.classList.toggle("active", Boolean(active));
+    }
   }
 
   applyFlow(id, active, reverse) {

@@ -1,6 +1,6 @@
 # Custom Flow Card
 
-Custom Lovelace card for Home Assistant that explains inverter power flow in a friendly source-to-load layout.
+Custom Lovelace card for Home Assistant that visualizes inverter power flow in an Energy Dashboard style.
 
 Works well for setups like:
 
@@ -10,12 +10,12 @@ Works well for setups like:
 
 ## Preview
 
-The card shows source tiles, clear flow rows, battery charge/discharge state, and a plain-English summary.
+The card keeps the familiar Home Assistant Energy-style node and arrow flow, with extra labels on each path so it is easier to read.
 
 ![Custom Flow Card Preview](./preview.svg)
 
 `preview.svg` is only for README/demo.  
-The real card UI is rendered by `custom-flow-card.js`.
+The real card UI is rendered from inline SVG in `custom-flow-card.js`.
 
 ## HACS Installation
 
@@ -105,9 +105,9 @@ You can still use YAML for advanced keys like custom icons.
 
 ## Notes
 
-- Card shows how much of the load is coming from solar, grid, and battery.
-- Battery flow is inferred from power balance: `load - grid supply - solar supply`.
-- When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show a backup summary like `Load needs 700 W; solar is giving 420 W, battery is giving 280 W`.
+- Card keeps the Energy-style diagram and adds inline flow labels such as `Solar -> Inverter: 420 W`.
+- Battery flow direction is inferred from power balance: `load - grid supply - solar supply`.
+- When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show `Mains cutoff | Load 700 W from solar 420 W + battery 280 W`.
 - `kW` values are automatically converted to `W` internally.
 - Details show calculation sources such as `2.69A x 230V` so you can verify where the numbers came from.
 - Direct power entity is used first when present; formula-based fallback is used when direct power is missing.
