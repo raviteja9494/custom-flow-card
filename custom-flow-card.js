@@ -132,11 +132,14 @@ class CustomFlowCard extends HTMLElement {
           <div class="detail"><span class="k">Load %</span><span id="detail-load-percentage">--</span></div>
           <div class="detail"><span class="k">Solar Today</span><span id="detail-solar-savings">--</span></div>
           <div class="detail"><span class="k">Mains V</span><span id="detail-mains-voltage">--</span></div>
+          <div class="detail"><span class="k">Grid Calc</span><span id="detail-grid-calc">--</span></div>
+          <div class="detail"><span class="k">Load Calc</span><span id="detail-load-calc">--</span></div>
+          <div class="detail"><span class="k">Solar Calc</span><span id="detail-solar-calc">--</span></div>
         </div>
       </ha-card>
       <style>
         :host {
-          --flow-node-size: 86px;
+          --flow-node-size: 74px;
           --flow-ok: var(--success-color, #43a047);
           --flow-muted: var(--disabled-color, #8a8a8a);
           --flow-grid: #1e88e5;
@@ -186,7 +189,7 @@ class CustomFlowCard extends HTMLElement {
 
         .wrapper {
           position: relative;
-          height: 320px;
+          height: 360px;
           padding: 10px;
           overflow: hidden;
           background: var(--flow-bg);
@@ -261,13 +264,14 @@ class CustomFlowCard extends HTMLElement {
         }
 
         .value {
-          font-size: 0.65rem;
+          font-size: 0.64rem;
           line-height: 0.8rem;
           opacity: 0.95;
-          word-break: break-word;
-          color: var(--flow-text);
-          max-height: 2.6em;
+          white-space: nowrap;
           overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 92%;
+          color: var(--flow-text);
         }
 
         .node-grid ha-icon { color: var(--flow-grid); }
@@ -281,7 +285,7 @@ class CustomFlowCard extends HTMLElement {
           margin: 0 12px 12px;
           padding-top: 10px;
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 8px;
         }
 
@@ -369,16 +373,16 @@ class CustomFlowCard extends HTMLElement {
     this.setIcon("icon-home", icons.home || "mdi:home-lightning-bolt");
     this.setIcon("icon-solar", icons.solar || "mdi:solar-power");
 
-    this.setText("value-grid", this.formatNodeValue(gridPower, gridResult.formulaText));
-    this.setText("value-inverter", this.formatNodeValue(inverterOutputPower, inverterOutputResult.formulaText));
+    this.setText("value-grid", this.formatPower(gridPower));
+    this.setText("value-inverter", this.formatPower(inverterOutputPower));
     this.setText(
       "value-battery",
       `${this.safePercent(batteryPercent)}${Number.isFinite(batteryVoltage) ? ` | ${batteryVoltage.toFixed(1)}V` : ""}`
     );
-    this.setText("value-home", this.formatNodeValue(loadPower, loadResult.formulaText));
-    this.setText("value-solar", this.formatNodeValue(solarPower, solarResult.formulaText));
+    this.setText("value-home", this.formatPower(loadPower));
+    this.setText("value-solar", this.formatPower(solarPower));
 
-    this.setDetails(entities);
+    this.setDetails(entities, gridResult, loadResult, solarResult);
     this.updateGatewayStatus(entities);
 
     this.applyFlow("line-grid-inverter", Math.abs(gridPower) > 5, gridPower < 0);
@@ -413,7 +417,7 @@ class CustomFlowCard extends HTMLElement {
     }
   }
 
-  setDetails(entities) {
+  setDetails(entities, gridResult, loadResult, solarResult) {
     this.setText("detail-today-energy", this.formatStateValue(entities.details_today_energy));
     this.setText("detail-grid-energy", this.formatStateValue(entities.details_grid_energy));
     this.setText("detail-temp", this.formatStateValue(entities.details_temperature));
@@ -424,6 +428,9 @@ class CustomFlowCard extends HTMLElement {
     this.setText("detail-load-percentage", this.formatStateValue(entities.details_load_percentage));
     this.setText("detail-solar-savings", this.formatStateValue(entities.details_solar_savings));
     this.setText("detail-mains-voltage", this.formatStateValue(entities.mains_voltage));
+    this.setText("detail-grid-calc", gridResult?.formulaText || "direct");
+    this.setText("detail-load-calc", loadResult?.formulaText || "direct");
+    this.setText("detail-solar-calc", solarResult?.formulaText || "direct");
   }
 
   formatStateValue(entityId) {
