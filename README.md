@@ -1,6 +1,6 @@
 # Custom Flow Card
 
-Custom Lovelace card for Home Assistant that visualizes inverter power flow in an Energy Dashboard style.
+Custom Lovelace card for Home Assistant that explains inverter power flow in a friendly source-to-load layout.
 
 Works well for setups like:
 
@@ -10,12 +10,12 @@ Works well for setups like:
 
 ## Preview
 
-Yes, the flow rendering is SVG-based inside the card.
+The card shows source tiles, clear flow rows, battery charge/discharge state, and a plain-English summary.
 
 ![Custom Flow Card Preview](./preview.svg)
 
 `preview.svg` is only for README/demo.  
-The real card UI is rendered from inline SVG in `custom-flow-card.js`.
+The real card UI is rendered by `custom-flow-card.js`.
 
 ## HACS Installation
 
@@ -105,11 +105,11 @@ You can still use YAML for advanced keys like custom icons.
 
 ## Notes
 
-- Card supports positive and negative power direction on grid line.
-- Battery flow direction is inferred from power balance: `load - grid supply - solar supply`.
-- When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show `Mains cutoff | Solar ... + Battery ... -> Load ...`.
+- Card shows how much of the load is coming from solar, grid, and battery.
+- Battery flow is inferred from power balance: `load - grid supply - solar supply`.
+- When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show a backup summary like `Load needs 700 W; solar is giving 420 W, battery is giving 280 W`.
 - `kW` values are automatically converted to `W` internally.
-- Node labels show both calculated output and formula source (example: `620 W | 2.69A x 230V`).
+- Details show calculation sources such as `2.69A x 230V` so you can verify where the numbers came from.
 - Direct power entity is used first when present; formula-based fallback is used when direct power is missing.
 - Visual editor now includes HA-native entity picker controls under each entity field for easier selection.
 - Default appearance is `light`. Set `appearance: dark` if you prefer dark mode.
