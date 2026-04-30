@@ -10,6 +10,7 @@ class CustomFlowCard extends HTMLElement {
       entities: {
         grid_power: "sensor.inverter_in_1_power",
         inverter_output_power: "sensor.inverter_out_power",
+        inverter_consumption: "sensor.inverter_out_inverter_consumption",
         load_power: "sensor.inverter_out_power",
         grid_current: "sensor.shellyplus2pm_b0b21c108704_output_0_current",
         grid_voltage: "sensor.shellyplus2pm_b0b21c108704_output_0_voltage",
@@ -17,6 +18,7 @@ class CustomFlowCard extends HTMLElement {
         load_voltage: "sensor.shellypmmini_348518e0a2a4_voltage",
         battery_percent: "sensor.v_guard_inverter_battery_percentage",
         battery_voltage: "sensor.v_guard_inverter_battery_voltage",
+        charging_current: "sensor.v_guard_inverter_charging_current",
         solar_current: "sensor.v_guard_inverter_solar_current",
         mains_voltage: "sensor.v_guard_inverter_mains_voltage",
         details_today_energy: "sensor.inverter_out_energy",
@@ -94,7 +96,7 @@ class CustomFlowCard extends HTMLElement {
 
           <div id="node-grid" class="node node-grid" style="--x:20%;--y:50%;">
             <ha-icon id="icon-grid"></ha-icon>
-            <div class="label">Grid</div>
+            <div class="label">Mains</div>
             <div class="value" id="value-grid"></div>
           </div>
 
@@ -133,13 +135,13 @@ class CustomFlowCard extends HTMLElement {
           </svg>
         </div>
         <div class="flow-breakdown">
-          <div class="breakdown-item solar"><span>Solar to load</span><strong id="breakdown-solar">--</strong></div>
-          <div class="breakdown-item grid"><span>Grid to load</span><strong id="breakdown-grid">--</strong></div>
+          <div class="breakdown-item solar"><span>Solar est.</span><strong id="breakdown-solar">--</strong></div>
+          <div class="breakdown-item grid"><span>Mains input</span><strong id="breakdown-grid">--</strong></div>
           <div class="breakdown-item battery"><span>Battery</span><strong id="breakdown-battery">--</strong></div>
         </div>
         <div class="details" id="details-row">
           <div class="detail"><span class="k">Out Today</span><span id="detail-today-energy">--</span></div>
-          <div class="detail"><span class="k">Grid Today</span><span id="detail-grid-energy">--</span></div>
+          <div class="detail"><span class="k">Mains Today</span><span id="detail-grid-energy">--</span></div>
           <div class="detail"><span class="k">Temp</span><span id="detail-temp">--</span></div>
           <div class="detail"><span class="k">Cuts</span><span id="detail-cuts">--</span></div>
           <div class="detail"><span class="k">BLE</span><span id="detail-ble">--</span></div>
@@ -148,7 +150,7 @@ class CustomFlowCard extends HTMLElement {
           <div class="detail"><span class="k">Load %</span><span id="detail-load-percentage">--</span></div>
           <div class="detail"><span class="k">Solar Today</span><span id="detail-solar-savings">--</span></div>
           <div class="detail"><span class="k">Mains V</span><span id="detail-mains-voltage">--</span></div>
-          <div class="detail"><span class="k">Grid Calc</span><span id="detail-grid-calc">--</span></div>
+          <div class="detail"><span class="k">Mains Calc</span><span id="detail-grid-calc">--</span></div>
           <div class="detail"><span class="k">Load Calc</span><span id="detail-load-calc">--</span></div>
           <div class="detail"><span class="k">Solar Calc</span><span id="detail-solar-calc">--</span></div>
           <div class="detail"><span class="k">Battery Calc</span><span id="detail-battery-calc">--</span></div>
@@ -499,18 +501,22 @@ class CustomFlowCard extends HTMLElement {
     const solarPower = solarResult.power;
     const batteryPercent = this.readNumber(entities.battery_percent);
     const batteryVoltage = this.readNumber(entities.battery_voltage);
+    const chargingCurrent = this.readNumber(entities.charging_current);
 
     const loadDemand = Number.isFinite(loadPower) && loadPower > 0 ? loadPower : inverterOutputPower;
-    const gridSupplyPower = Math.max(0, gridPower);
+    const mainsInputPower = gridOnline ? Math.max(0, rawGridPower) : 0;
+    const inverterConsumptionPower = this.resolveInverterConsumptionPower(entities, mainsInputPower, inverterOutputPower);
     const solarSupplyPower = Math.max(0, solarPower);
-    const solarToLoad = Math.min(solarSupplyPower, Math.max(0, loadDemand));
-    const remainingAfterSolar = Math.max(0, loadDemand - solarToLoad);
-    const gridToLoad = gridOnline ? Math.min(gridSupplyPower, remainingAfterSolar) : 0;
-    const remainingAfterGrid = Math.max(0, remainingAfterSolar - gridToLoad);
-    const batteryToLoad = remainingAfterGrid;
-    const batteryPower = loadDemand - gridSupplyPower - solarSupplyPower;
-    const batteryChargingPower = Math.max(0, solarSupplyPower + gridSupplyPower - loadDemand);
-    const batteryState = batteryPower > 10 ? "discharging" : batteryPower < -10 ? "charging" : "idle";
+    const solarToLoad = gridOnline ? 0 : Math.min(solarSupplyPower, Math.max(0, loadDemand));
+    const batteryToLoad = gridOnline ? 0 : Math.max(0, loadDemand - solarToLoad);
+    const measuredChargingPower = Number.isFinite(chargingCurrent) && Number.isFinite(batteryVoltage)
+      ? Math.max(0, chargingCurrent * batteryVoltage)
+      : NaN;
+    const batteryChargingPower = Number.isFinite(measuredChargingPower)
+      ? measuredChargingPower
+      : (gridOnline ? Math.max(0, mainsInputPower - loadDemand - inverterConsumptionPower) : 0);
+    const batteryPower = batteryToLoad > 5 ? batteryToLoad : -batteryChargingPower;
+    const batteryState = batteryChargingPower > 10 ? "charging" : batteryToLoad > 10 ? "discharging" : "idle";
 
     this.setIcon("icon-grid", icons.grid || "mdi:transmission-tower");
     this.setIcon("icon-inverter", icons.inverter || "mdi:power");
@@ -518,22 +524,22 @@ class CustomFlowCard extends HTMLElement {
     this.setIcon("icon-home", icons.home || "mdi:home-lightning-bolt");
     this.setIcon("icon-solar", icons.solar || "mdi:solar-power");
 
-    this.setText("value-grid", gridOnline ? this.formatPower(gridToLoad) : "Cutoff");
+    this.setText("value-grid", gridOnline ? this.formatPower(mainsInputPower) : "Cutoff");
     this.setText("value-inverter", this.formatPower(inverterOutputPower));
     this.setText(
       "value-battery",
       this.formatBatteryNodeValue(batteryState, batteryToLoad, batteryChargingPower, batteryPercent)
     );
     this.setText("value-home", this.formatPower(loadDemand));
-    this.setText("value-solar", this.formatPower(solarToLoad));
+    this.setText("value-solar", this.formatPower(solarSupplyPower));
     this.updateSolarCurrentGraph(entities.solar_current);
 
-    this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower, rawGridPower, inverterOutputPower);
+    this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower, rawGridPower, inverterOutputPower, inverterConsumptionPower);
     this.updateGatewayStatus(entities);
     this.updateBreakdown({
       gridOnline,
-      solarToLoad,
-      gridToLoad,
+      solarPower: solarSupplyPower,
+      mainsInputPower,
       batteryToLoad,
       batteryChargingPower,
       batteryState,
@@ -541,18 +547,18 @@ class CustomFlowCard extends HTMLElement {
     });
     this.updateFlowStatus({
       gridOnline,
-      gridPower,
-      solarPower,
+      mainsInputPower,
+      solarPower: solarSupplyPower,
       batteryPower,
       batteryState,
       loadDemand,
       solarToLoad,
-      gridToLoad,
       batteryToLoad,
-      batteryChargingPower
+      batteryChargingPower,
+      inverterConsumptionPower
     });
 
-    this.applyFlow("line-grid-inverter", gridOnline && gridToLoad > 5, gridPower < 0);
+    this.applyFlow("line-grid-inverter", gridOnline && mainsInputPower > 5, gridPower < 0);
     this.applyFlow("line-solar-inverter", solarPower > 5, false);
 
     if (batteryState === "charging") {
@@ -584,7 +590,7 @@ class CustomFlowCard extends HTMLElement {
     }
   }
 
-  setDetails(entities, gridResult, loadResult, solarResult, batteryPower, inverterInputPower, inverterOutputPower) {
+  setDetails(entities, gridResult, loadResult, solarResult, batteryPower, inverterInputPower, inverterOutputPower, inverterConsumptionPower) {
     this.setText("detail-today-energy", this.formatStateValue(entities.details_today_energy));
     this.setText("detail-grid-energy", this.formatStateValue(entities.details_grid_energy));
     this.setText("detail-temp", this.formatStateValue(entities.details_temperature));
@@ -601,7 +607,7 @@ class CustomFlowCard extends HTMLElement {
     this.setText("detail-battery-calc", this.formatBatteryPower(batteryPower));
     this.setText("detail-in-power", this.formatPower(inverterInputPower));
     this.setText("detail-out-power", this.formatPower(inverterOutputPower));
-    this.setText("detail-inverter-consumption", this.formatInverterConsumption(inverterInputPower, inverterOutputPower));
+    this.setText("detail-inverter-consumption", this.formatInverterConsumption(inverterConsumptionPower, inverterInputPower, inverterOutputPower));
   }
 
   async updateSolarCurrentGraph(entityId) {
@@ -686,9 +692,9 @@ class CustomFlowCard extends HTMLElement {
     panel.hidden = false;
   }
 
-  updateBreakdown({ gridOnline, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower, batteryState, batteryPercent }) {
-    this.setText("breakdown-solar", this.formatPower(solarToLoad));
-    this.setText("breakdown-grid", gridOnline ? this.formatPower(gridToLoad) : "Cutoff");
+  updateBreakdown({ gridOnline, solarPower, mainsInputPower, batteryToLoad, batteryChargingPower, batteryState, batteryPercent }) {
+    this.setText("breakdown-solar", this.formatPower(solarPower));
+    this.setText("breakdown-grid", gridOnline ? this.formatPower(mainsInputPower) : "Cutoff");
 
     const percent = this.safePercent(batteryPercent);
     if (batteryState === "charging") {
@@ -702,34 +708,36 @@ class CustomFlowCard extends HTMLElement {
     this.setText("breakdown-battery", `Idle | ${percent}`);
   }
 
-  updateFlowStatus({ gridOnline, gridPower, solarPower, batteryPower, batteryState, loadDemand, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower }) {
+  updateFlowStatus({ gridOnline, mainsInputPower, solarPower, batteryPower, batteryState, loadDemand, solarToLoad, batteryToLoad, batteryChargingPower, inverterConsumptionPower }) {
     const node = this.content.getElementById("flow-status");
     if (!node) return;
 
-    const sources = [];
-    if (solarToLoad > 5) {
-      sources.push(`Solar ${this.formatPower(solarToLoad)}`);
-    }
-    if (gridOnline && gridToLoad > 5) {
-      sources.push(`Grid ${this.formatPower(gridToLoad)}`);
-    }
-    if (batteryToLoad > 5) {
-      sources.push(`Battery ${this.formatPower(batteryToLoad)}`);
-    }
-
-    const prefix = !gridOnline ? "Mains cutoff | " : "";
-
-    if (batteryState === "charging") {
-      node.textContent = `${prefix}${sources.join(" + ") || "Supply"} -> Load ${this.formatPower(loadDemand)} | Battery charging ${this.formatPower(batteryChargingPower)}`;
+    if (gridOnline) {
+      const parts = [
+        `Mains ${this.formatPower(mainsInputPower)} -> Inverter`,
+        `Load ${this.formatPower(loadDemand)}`,
+        `Inv consumption ${this.formatPower(inverterConsumptionPower)}`
+      ];
+      if (batteryState === "charging") {
+        parts.push(`Battery charging ${this.formatPower(batteryChargingPower)}`);
+      }
+      if (solarPower > 5) {
+        parts.push(`Solar available ${this.formatPower(solarPower)}`);
+      }
+      node.textContent = parts.join(" | ");
       return;
     }
+
+    const sources = [];
+    if (solarToLoad > 5) sources.push(`Solar ${this.formatPower(solarToLoad)}`);
+    if (batteryToLoad > 5) sources.push(`Battery ${this.formatPower(batteryToLoad)}`);
 
     if (sources.length) {
-      node.textContent = `${prefix}${sources.join(" + ")} -> Load ${this.formatPower(loadDemand)}`;
+      node.textContent = `Mains cutoff | ${sources.join(" + ")} -> Load ${this.formatPower(loadDemand)}`;
       return;
     }
 
-    node.textContent = gridOnline ? "No active load flow detected" : "Mains cutoff | Waiting for solar or battery flow";
+    node.textContent = "Mains cutoff | Waiting for solar or battery flow";
   }
 
   formatStateValue(entityId) {
@@ -797,6 +805,16 @@ class CustomFlowCard extends HTMLElement {
       power: loadResult.power,
       formulaText: loadResult.formulaText || "derived from load"
     };
+  }
+
+  resolveInverterConsumptionPower(entities, inputPower, outputPower) {
+    if (entities.inverter_consumption) {
+      return Math.max(0, this.readPower(entities.inverter_consumption));
+    }
+    if (!Number.isFinite(inputPower) || !Number.isFinite(outputPower)) {
+      return 0;
+    }
+    return Math.max(0, inputPower - outputPower);
   }
 
   resolveSolarPower(entities, gridOnlineVoltageMin) {
@@ -981,15 +999,14 @@ class CustomFlowCard extends HTMLElement {
     return "idle";
   }
 
-  formatInverterConsumption(inputPower, outputPower) {
-    if (!Number.isFinite(inputPower) || !Number.isFinite(outputPower)) {
+  formatInverterConsumption(consumptionPower, inputPower, outputPower) {
+    if (!Number.isFinite(consumptionPower)) {
       return "--";
     }
-    const consumption = inputPower - outputPower;
-    if (consumption > 10) {
-      return this.formatPower(consumption);
+    if (consumptionPower > 10) {
+      return this.formatPower(consumptionPower);
     }
-    if (outputPower > inputPower + 10) {
+    if (Number.isFinite(inputPower) && Number.isFinite(outputPower) && outputPower > inputPower + 10) {
       return "0 W (backup)";
     }
     return "0 W";
@@ -1105,10 +1122,11 @@ class CustomFlowCardEditor extends HTMLElement {
         ${this.field("grid_online_voltage_min", "Grid Online Voltage Min", cfg.grid_online_voltage_min ?? 90)}
 
         <div class="section">Flow Entities</div>
-        ${this.field("entities.grid_power", "Grid Power (optional direct)", entities.grid_power || "")}
-        ${this.field("entities.grid_current", "Grid Current", entities.grid_current || "")}
-        ${this.field("entities.grid_voltage", "Grid Voltage", entities.grid_voltage || "")}
+        ${this.field("entities.grid_power", "Mains/Input Power (optional direct)", entities.grid_power || "")}
+        ${this.field("entities.grid_current", "Mains/Input Current", entities.grid_current || "")}
+        ${this.field("entities.grid_voltage", "Mains/Input Voltage", entities.grid_voltage || "")}
         ${this.field("entities.inverter_output_power", "Inverter Output Power (optional direct)", entities.inverter_output_power || "")}
+        ${this.field("entities.inverter_consumption", "Inverter Consumption (optional direct)", entities.inverter_consumption || "")}
         ${this.field("entities.load_power", "Load Power", entities.load_power || "")}
         ${this.field("entities.load_current", "Load Current", entities.load_current || "")}
         ${this.field("entities.load_voltage", "Load Voltage", entities.load_voltage || "")}
@@ -1118,6 +1136,7 @@ class CustomFlowCardEditor extends HTMLElement {
         ${this.field("entities.mains_voltage", "Mains Voltage", entities.mains_voltage || "")}
         ${this.field("entities.battery_percent", "Battery Percentage", entities.battery_percent || "")}
         ${this.field("entities.battery_voltage", "Battery Voltage", entities.battery_voltage || "")}
+        ${this.field("entities.charging_current", "Battery Charging Current", entities.charging_current || "")}
 
         <div class="section">Details Strip</div>
         ${this.field("entities.details_today_energy", "Output Energy Today", entities.details_today_energy || "")}

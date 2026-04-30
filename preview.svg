@@ -23,7 +23,7 @@
 
   <g transform="translate(110,170)">
     <circle cx="0" cy="0" r="64" fill="#ffffff" stroke="#8cb5e8" stroke-width="3"/>
-    <text x="0" y="-6" text-anchor="middle" fill="#2e69aa" font-size="15" font-family="Segoe UI, Arial">Grid</text>
+    <text x="0" y="-6" text-anchor="middle" fill="#2e69aa" font-size="15" font-family="Segoe UI, Arial">Mains</text>
     <text x="0" y="18" text-anchor="middle" fill="#1e2c43" font-size="16" font-family="Segoe UI, Arial" font-weight="700">Cutoff</text>
   </g>
 
