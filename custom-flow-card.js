@@ -143,6 +143,9 @@ class CustomFlowCard extends HTMLElement {
           <div class="detail"><span class="k">Load Calc</span><span id="detail-load-calc">--</span></div>
           <div class="detail"><span class="k">Solar Calc</span><span id="detail-solar-calc">--</span></div>
           <div class="detail"><span class="k">Battery Calc</span><span id="detail-battery-calc">--</span></div>
+          <div class="detail"><span class="k">In Power</span><span id="detail-in-power">--</span></div>
+          <div class="detail"><span class="k">Out Power</span><span id="detail-out-power">--</span></div>
+          <div class="detail"><span class="k">In - Out</span><span id="detail-in-out-balance">--</span></div>
         </div>
       </ha-card>
       <style>
@@ -428,11 +431,10 @@ class CustomFlowCard extends HTMLElement {
 
     const gridResult = this.resolvePowerWithFormula(entities.grid_power, entities.grid_current, entities.grid_voltage, entities.mains_voltage);
     const loadResult = this.resolvePowerWithFormula(entities.load_power, entities.load_current, entities.load_voltage, entities.mains_voltage);
-    const inverterOutputResult = this.resolveInverterOutputPower(entities, loadResult);
-    const solarResult = this.resolveSolarPower(entities);
-
     const rawGridPower = gridResult.power;
     const gridOnline = this.isGridOnline(entities, rawGridPower, cfg.grid_online_voltage_min);
+    const inverterOutputResult = this.resolveInverterOutputPower(entities, loadResult);
+    const solarResult = this.resolveSolarPower(entities, cfg.grid_online_voltage_min);
     const gridPower = gridOnline ? rawGridPower : 0;
     const inverterOutputPower = inverterOutputResult.power;
     const loadPower = loadResult.power;
@@ -467,7 +469,7 @@ class CustomFlowCard extends HTMLElement {
     this.setText("value-home", this.formatPower(loadDemand));
     this.setText("value-solar", this.formatPower(solarToLoad));
 
-    this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower);
+    this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower, rawGridPower, inverterOutputPower);
     this.updateGatewayStatus(entities);
     this.updateBreakdown({
       gridOnline,
@@ -522,7 +524,7 @@ class CustomFlowCard extends HTMLElement {
     }
   }
 
-  setDetails(entities, gridResult, loadResult, solarResult, batteryPower) {
+  setDetails(entities, gridResult, loadResult, solarResult, batteryPower, inverterInputPower, inverterOutputPower) {
     this.setText("detail-today-energy", this.formatStateValue(entities.details_today_energy));
     this.setText("detail-grid-energy", this.formatStateValue(entities.details_grid_energy));
     this.setText("detail-temp", this.formatStateValue(entities.details_temperature));
@@ -537,6 +539,9 @@ class CustomFlowCard extends HTMLElement {
     this.setText("detail-load-calc", loadResult?.formulaText || "direct");
     this.setText("detail-solar-calc", solarResult?.formulaText || "direct");
     this.setText("detail-battery-calc", this.formatBatteryPower(batteryPower));
+    this.setText("detail-in-power", this.formatPower(inverterInputPower));
+    this.setText("detail-out-power", this.formatPower(inverterOutputPower));
+    this.setText("detail-in-out-balance", this.formatInOutBalance(inverterInputPower - inverterOutputPower));
   }
 
   updateBreakdown({ gridOnline, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower, batteryState }) {
@@ -651,7 +656,7 @@ class CustomFlowCard extends HTMLElement {
     };
   }
 
-  resolveSolarPower(entities) {
+  resolveSolarPower(entities, gridOnlineVoltageMin) {
     if (entities.solar_power) {
       return {
         power: this.readPower(entities.solar_power),
@@ -660,19 +665,48 @@ class CustomFlowCard extends HTMLElement {
     }
 
     const current = this.readNumber(entities.solar_current);
-    const solarVoltage = this.pickBestVoltage([
-      entities.solar_voltage,
-      entities.mains_voltage,
-      entities.grid_voltage
-    ]);
+    const voltageChoice = this.pickSolarVoltage(entities, gridOnlineVoltageMin);
 
-    if (!Number.isFinite(current) || !Number.isFinite(solarVoltage)) {
+    if (!Number.isFinite(current) || !Number.isFinite(voltageChoice.value)) {
       return { power: 0, formulaText: "" };
     }
     return {
-      power: current * solarVoltage,
-      formulaText: `${current.toFixed(2)}A x ${solarVoltage.toFixed(0)}V`
+      power: current * voltageChoice.value,
+      formulaText: `${current.toFixed(2)}A x ${voltageChoice.value.toFixed(0)}V${voltageChoice.label ? ` ${voltageChoice.label}` : ""}`
     };
+  }
+
+  pickSolarVoltage(entities, gridOnlineVoltageMin) {
+    const directSolarVoltage = this.readNumber(entities.solar_voltage);
+    if (Number.isFinite(directSolarVoltage) && directSolarVoltage > 0) {
+      return { value: directSolarVoltage, label: "solar" };
+    }
+
+    const threshold = Number.isFinite(Number(gridOnlineVoltageMin)) ? Number(gridOnlineVoltageMin) : 90;
+    const mainsVoltage = this.readNumber(entities.mains_voltage);
+    if (Number.isFinite(mainsVoltage) && mainsVoltage >= threshold) {
+      return { value: mainsVoltage, label: "mains" };
+    }
+
+    const gridVoltage = this.readNumber(entities.grid_voltage);
+    if (!Number.isFinite(mainsVoltage) && Number.isFinite(gridVoltage) && gridVoltage >= threshold) {
+      return { value: gridVoltage, label: "grid" };
+    }
+
+    const batteryVoltage = this.readNumber(entities.battery_voltage);
+    if (Number.isFinite(batteryVoltage) && batteryVoltage > 0) {
+      return { value: batteryVoltage, label: "battery" };
+    }
+
+    if (Number.isFinite(mainsVoltage) && mainsVoltage > 0) {
+      return { value: mainsVoltage, label: "low mains" };
+    }
+
+    if (Number.isFinite(gridVoltage) && gridVoltage > 0) {
+      return { value: gridVoltage, label: "low grid" };
+    }
+
+    return { value: NaN, label: "" };
   }
 
   resolvePowerWithFormula(powerEntity, currentEntity, voltageEntity, fallbackVoltageEntity) {
@@ -791,6 +825,19 @@ class CustomFlowCard extends HTMLElement {
       return `charging ${this.formatPower(Math.abs(value))}`;
     }
     return "idle";
+  }
+
+  formatInOutBalance(value) {
+    if (!Number.isFinite(value)) {
+      return "--";
+    }
+    if (value < -10) {
+      return `${this.formatPower(value)} backup`;
+    }
+    if (value > 10) {
+      return `${this.formatPower(value)} surplus/loss`;
+    }
+    return "balanced";
   }
 
   formatBatteryNodeValue(batteryState, batteryToLoad, batteryChargingPower, batteryPercent) {

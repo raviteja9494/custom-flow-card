@@ -44,9 +44,11 @@ title: V-Guard Inverter Flow
 appearance: light
 grid_online_voltage_min: 90
 entities:
+  grid_power: sensor.inverter_in_1_power
   grid_current: sensor.shellyplus2pm_b0b21c108704_output_0_current
   grid_voltage: sensor.shellyplus2pm_b0b21c108704_output_0_voltage
   inverter_output_power: sensor.inverter_out_power
+  load_power: sensor.inverter_out_power
   load_current: sensor.v_guard_inverter_load_current
   load_voltage: sensor.shellypmmini_348518e0a2a4_voltage
   battery_percent: sensor.v_guard_inverter_battery_percentage
@@ -86,13 +88,13 @@ You can still use YAML for advanced keys like custom icons.
 
 ## Entity Mapping
 
-- `entities.grid_power` (optional): Direct grid power in W/kW.
+- `entities.grid_power` (recommended): Direct inverter input/grid power in W/kW, for example `sensor.inverter_in_1_power`.
 - `entities.grid_current` + `entities.grid_voltage` (recommended if no direct power): card computes grid power as `A x V`.
-- `entities.inverter_output_power` (optional): Direct inverter output power in W/kW.
+- `entities.inverter_output_power` (recommended): Direct inverter output power in W/kW, for example `sensor.inverter_out_power`.
 - `entities.load_power` (optional): Direct load power in W/kW.
 - `entities.load_current` + `entities.load_voltage` (recommended): card computes load power as `A x V`.
 - `entities.solar_power` (optional): Direct solar power in W/kW.
-- `entities.solar_current` + (`entities.solar_voltage` or `entities.mains_voltage`) (recommended): card computes solar power as `A x V`.
+- `entities.solar_current` + voltage fallback: direct `entities.solar_voltage` is best. Without it, the card uses healthy mains/grid voltage, then battery voltage during mains cutoff, and only uses low mains/grid voltage as a last resort.
 - `entities.battery_percent` (optional): Battery percentage label and icon.
 - `entities.battery_voltage` (optional): Extra battery metric label.
 - `grid_online_voltage_min` (optional): Voltage threshold for considering grid/mains available. Default is `90`, so mains cutoff hides the grid flow.
@@ -107,6 +109,7 @@ You can still use YAML for advanced keys like custom icons.
 
 - Card keeps the Home Assistant Energy Dashboard-style circles and arrows.
 - The contribution strip shows how much of the current load comes from solar, grid, and battery.
+- Details include inverter `In Power`, `Out Power`, and `In - Out`; negative balance is shown as backup output during mains cutoff.
 - Battery flow direction is inferred from power balance: `load - grid supply - solar supply`.
 - When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show `Mains cutoff | Solar 420 W + Battery 280 W -> Load 700 W`.
 - `kW` values are automatically converted to `W` internally.
