@@ -13,7 +13,13 @@ class CustomFlowCard extends HTMLElement {
         load_power: "sensor.inverter_out_power",
         battery_percent: "sensor.v_guard_inverter_battery_percentage",
         battery_voltage: "sensor.v_guard_inverter_battery_voltage",
-        solar_current: "sensor.v_guard_inverter_solar_current"
+        solar_current: "sensor.v_guard_inverter_solar_current",
+        mains_voltage: "sensor.v_guard_inverter_mains_voltage",
+        details_today_energy: "sensor.inverter_out_energy",
+        details_grid_energy: "sensor.inverter_in_1_energy",
+        details_temperature: "sensor.v_guard_inverter_system_temperature",
+        details_power_cuts_today: "sensor.v_guard_inverter_power_cuts_today",
+        details_ble_status: "sensor.v_guard_inverter_inverter_ble_status"
       },
       icons: {
         grid: "mdi:transmission-tower",
@@ -45,7 +51,7 @@ class CustomFlowCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 4;
+    return 5;
   }
 
   render() {
@@ -96,6 +102,13 @@ class CustomFlowCard extends HTMLElement {
             <div class="label">Load</div>
             <div class="value" id="value-home"></div>
           </div>
+        </div>
+        <div class="details" id="details-row">
+          <div class="detail"><span class="k">Out Today</span><span id="detail-today-energy">--</span></div>
+          <div class="detail"><span class="k">Grid Today</span><span id="detail-grid-energy">--</span></div>
+          <div class="detail"><span class="k">Temp</span><span id="detail-temp">--</span></div>
+          <div class="detail"><span class="k">Cuts</span><span id="detail-cuts">--</span></div>
+          <div class="detail"><span class="k">BLE</span><span id="detail-ble">--</span></div>
         </div>
       </ha-card>
       <style>
@@ -197,6 +210,37 @@ class CustomFlowCard extends HTMLElement {
         .node-battery ha-icon { color: var(--flow-battery); }
         .node-home ha-icon { color: var(--flow-home); }
         .node-solar ha-icon { color: var(--flow-solar); }
+
+        .details {
+          border-top: 1px solid var(--divider-color, rgba(128, 128, 128, 0.35));
+          margin: 0 12px 12px;
+          padding-top: 10px;
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .detail {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          border-radius: 8px;
+          background: color-mix(in srgb, var(--ha-card-background, #111) 85%, var(--primary-text-color, #fff) 6%);
+          padding: 7px 6px;
+          line-height: 1.15;
+        }
+
+        .detail .k {
+          font-size: 0.64rem;
+          opacity: 0.75;
+          margin-bottom: 4px;
+        }
+
+        .detail span:last-child {
+          font-size: 0.72rem;
+          word-break: break-word;
+          text-align: center;
+        }
       </style>
     `;
 
@@ -239,6 +283,8 @@ class CustomFlowCard extends HTMLElement {
     this.setText("value-home", this.formatPower(loadPower));
     this.setText("value-solar", this.formatPower(solarPower));
 
+    this.setDetails(entities);
+
     this.applyFlow("line-grid-inverter", Math.abs(gridPower) > 5, gridPower < 0);
     this.applyFlow("line-solar-inverter", solarPower > 5, false);
 
@@ -258,6 +304,28 @@ class CustomFlowCard extends HTMLElement {
       return null;
     }
     return this._hass.states[entityId];
+  }
+
+  setDetails(entities) {
+    this.setText("detail-today-energy", this.formatStateValue(entities.details_today_energy));
+    this.setText("detail-grid-energy", this.formatStateValue(entities.details_grid_energy));
+    this.setText("detail-temp", this.formatStateValue(entities.details_temperature));
+    this.setText("detail-cuts", this.formatStateValue(entities.details_power_cuts_today));
+    this.setText("detail-ble", this.formatStateValue(entities.details_ble_status));
+  }
+
+  formatStateValue(entityId) {
+    const state = this.readState(entityId);
+    if (!state) {
+      return "--";
+    }
+
+    const unit = state.attributes.unit_of_measurement || "";
+    const value = state.state;
+    if (!unit) {
+      return value;
+    }
+    return `${value} ${unit}`;
   }
 
   readNumber(entityId) {
@@ -364,6 +432,11 @@ class CustomFlowCard extends HTMLElement {
 }
 
 class CustomFlowCardEditor extends HTMLElement {
+  set hass(hass) {
+    this._hass = hass;
+    this.render();
+  }
+
   setConfig(config) {
     this._config = config;
     this.render();
@@ -374,34 +447,124 @@ class CustomFlowCardEditor extends HTMLElement {
       this.attachShadow({ mode: "open" });
     }
 
+    const cfg = this._config || {};
+    const entities = cfg.entities || {};
+    const entityOptions = this.buildEntityOptions();
+
     this.shadowRoot.innerHTML = `
       <style>
         :host {
           display: block;
-          padding: 8px 0;
+          padding: 8px 0 0;
+        }
+        .grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+        .field {
+          display: grid;
+          gap: 4px;
+        }
+        .field label {
+          font-size: 0.85rem;
+          color: var(--secondary-text-color);
+        }
+        .field input {
+          box-sizing: border-box;
+          width: 100%;
+          padding: 8px;
+          border-radius: 6px;
+          border: 1px solid var(--divider-color);
+          color: var(--primary-text-color);
+          background: var(--card-background-color);
         }
         .hint {
           color: var(--secondary-text-color);
           line-height: 1.5;
-          font-size: 0.92rem;
+          font-size: 0.82rem;
+          margin-top: 8px;
         }
-        code {
-          background: var(--code-editor-background-color, rgba(127, 127, 127, 0.12));
-          border-radius: 4px;
-          padding: 1px 4px;
+        .section {
+          margin: 6px 0 2px;
+          font-size: 0.88rem;
+          font-weight: 600;
         }
       </style>
+      <datalist id="entity-list">${entityOptions}</datalist>
+      <div class="grid">
+        ${this.field("title", "Title", cfg.title || "V-Guard Inverter Flow")}
+
+        <div class="section">Flow Entities</div>
+        ${this.field("entities.grid_power", "Grid Power (required)", entities.grid_power || "")}
+        ${this.field("entities.inverter_output_power", "Inverter Output Power (required)", entities.inverter_output_power || "")}
+        ${this.field("entities.load_power", "Load Power", entities.load_power || "")}
+        ${this.field("entities.solar_power", "Solar Power", entities.solar_power || "")}
+        ${this.field("entities.solar_current", "Solar Current", entities.solar_current || "")}
+        ${this.field("entities.mains_voltage", "Mains Voltage", entities.mains_voltage || "")}
+        ${this.field("entities.battery_percent", "Battery Percentage", entities.battery_percent || "")}
+        ${this.field("entities.battery_voltage", "Battery Voltage", entities.battery_voltage || "")}
+
+        <div class="section">Details Strip</div>
+        ${this.field("entities.details_today_energy", "Output Energy Today", entities.details_today_energy || "")}
+        ${this.field("entities.details_grid_energy", "Grid Energy Today", entities.details_grid_energy || "")}
+        ${this.field("entities.details_temperature", "System Temperature", entities.details_temperature || "")}
+        ${this.field("entities.details_power_cuts_today", "Power Cuts Today", entities.details_power_cuts_today || "")}
+        ${this.field("entities.details_ble_status", "BLE Status", entities.details_ble_status || "")}
+      </div>
       <div class="hint">
-        Configure this card with YAML.<br />
-        Required keys: <code>entities.grid_power</code> and <code>entities.inverter_output_power</code>.<br />
-        Optional keys: <code>entities.load_power</code>, <code>entities.solar_power</code>, <code>entities.solar_current</code>,
-        <code>entities.mains_voltage</code>, <code>entities.battery_percent</code>, <code>entities.battery_voltage</code>.
+        Tip: values auto-complete from existing entities. You can still switch to YAML mode for advanced icon customization.
+      </div>
+    `;
+
+    this.shadowRoot.querySelectorAll("input[data-path]").forEach((el) => {
+      el.addEventListener("change", (event) => this.handleInput(event));
+    });
+  }
+
+  field(path, label, value) {
+    return `
+      <div class="field">
+        <label for="${path}">${label}</label>
+        <input id="${path}" data-path="${path}" list="entity-list" value="${value}" />
       </div>
     `;
   }
 
-  static get styles() {
-    return [];
+  buildEntityOptions() {
+    if (!this._hass || !this._hass.states) {
+      return "";
+    }
+
+    return Object.keys(this._hass.states)
+      .sort()
+      .map((entityId) => `<option value="${entityId}"></option>`)
+      .join("");
+  }
+
+  handleInput(event) {
+    const path = event.target.dataset.path;
+    const value = event.target.value.trim();
+    const next = structuredClone(this._config || {});
+
+    if (path === "title") {
+      next.title = value;
+    } else if (path.startsWith("entities.")) {
+      const key = path.replace("entities.", "");
+      next.entities = next.entities || {};
+      if (value) {
+        next.entities[key] = value;
+      } else {
+        delete next.entities[key];
+      }
+    }
+
+    this._config = next;
+    this.dispatchEvent(new CustomEvent("config-changed", {
+      detail: { config: next },
+      bubbles: true,
+      composed: true
+    }));
   }
 }
 

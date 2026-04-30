@@ -8,6 +8,12 @@ Works well for setups like:
 - Inverter output power from Shelly device
 - Battery and solar telemetry from BLE -> ESP32 -> MQTT sensors
 
+## Preview
+
+Yes, the flow rendering is SVG-based inside the card.
+
+![Custom Flow Card Preview](./preview.svg)
+
 ## HACS Installation
 
 1. Push this repo to GitHub.
@@ -48,6 +54,18 @@ icons:
   solar: mdi:solar-power
 ```
 
+## UI-Based Configuration
+
+This card now supports visual editor configuration in Lovelace UI mode.
+
+In **Edit Dashboard -> Add Card -> Custom: Custom Flow Card**, you can set:
+
+- Card title
+- Grid / inverter / load / solar / battery entities
+- Details strip entities (today energy, temperature, cuts, BLE status)
+
+You can still use YAML for advanced keys like custom icons.
+
 ## Entity Mapping
 
 - `entities.grid_power` (required): Power from grid side (W or kW).
@@ -57,6 +75,11 @@ icons:
 - `entities.solar_current` + `entities.mains_voltage` (optional): if `solar_power` is absent, card estimates solar power using `current * voltage`.
 - `entities.battery_percent` (optional): Battery percentage label and icon.
 - `entities.battery_voltage` (optional): Extra battery metric label.
+- `entities.details_today_energy` (optional): Details strip item, output energy today.
+- `entities.details_grid_energy` (optional): Details strip item, grid energy today.
+- `entities.details_temperature` (optional): Details strip item, inverter/system temperature.
+- `entities.details_power_cuts_today` (optional): Details strip item, power cut count.
+- `entities.details_ble_status` (optional): Details strip item, BLE connectivity state.
 
 ## Notes
 
