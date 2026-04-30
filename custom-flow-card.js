@@ -23,7 +23,8 @@ class CustomFlowCard extends HTMLElement {
         details_grid_energy: "sensor.inverter_in_1_energy",
         details_temperature: "sensor.v_guard_inverter_system_temperature",
         details_power_cuts_today: "sensor.v_guard_inverter_power_cuts_today",
-        details_ble_status: "sensor.v_guard_inverter_inverter_ble_status"
+        details_ble_status: "sensor.v_guard_inverter_inverter_ble_status",
+        gateway_status: "sensor.v_guard_inverter_inverter_ble_status"
       },
       icons: {
         grid: "mdi:transmission-tower",
@@ -71,6 +72,7 @@ class CustomFlowCard extends HTMLElement {
     root.innerHTML = `
       <ha-card>
         <div class="card-header" id="title"></div>
+        <div class="status-badge" id="status-badge" hidden>Data source offline</div>
         <div class="wrapper">
           <svg viewBox="0 0 360 210" class="flow-svg" role="img" aria-label="Power flow">
             <defs>
@@ -152,6 +154,23 @@ class CustomFlowCard extends HTMLElement {
           line-height: 1.4rem;
           padding: 16px 16px 0;
           font-weight: 500;
+        }
+
+        .status-badge {
+          margin: 8px 12px 0;
+          padding: 6px 10px;
+          border-radius: 8px;
+          background: #fff3e0;
+          color: #8a4b00;
+          border: 1px solid #ffd08a;
+          font-size: 0.76rem;
+          line-height: 1rem;
+        }
+
+        :host([appearance="dark"]) .status-badge {
+          background: #402c13;
+          color: #ffd18d;
+          border-color: #81541f;
         }
 
         .wrapper {
@@ -254,6 +273,7 @@ class CustomFlowCard extends HTMLElement {
           align-items: center;
           border-radius: 8px;
           background: var(--flow-detail-bg);
+          border: 1px solid var(--divider-color, rgba(128, 128, 128, 0.35));
           padding: 7px 6px;
           line-height: 1.15;
         }
@@ -284,6 +304,7 @@ class CustomFlowCard extends HTMLElement {
 
     const cfg = this._config;
     this.setAppearance(cfg.appearance || "light");
+    this.applyAppearanceColors(cfg.appearance || "light");
     const entities = cfg.entities || {};
     const icons = cfg.icons || {};
 
@@ -320,6 +341,7 @@ class CustomFlowCard extends HTMLElement {
     this.setText("value-solar", this.formatNodeValue(solarPower, solarResult.formulaText));
 
     this.setDetails(entities);
+    this.updateGatewayStatus(entities);
 
     this.applyFlow("line-grid-inverter", Math.abs(gridPower) > 5, gridPower < 0);
     this.applyFlow("line-solar-inverter", solarPower > 5, false);
@@ -353,6 +375,28 @@ class CustomFlowCard extends HTMLElement {
     }
   }
 
+  applyAppearanceColors(mode) {
+    const isDark = mode === "dark";
+    const detailBg = isDark ? "#253247" : "#ffffff";
+    const detailText = isDark ? "#dbe4f5" : "#25324d";
+    const wrapperBg = isDark ? "#181d29" : "#f8fafc";
+    const badge = this.content.getElementById("status-badge");
+    const wrapper = this.content.querySelector(".wrapper");
+
+    if (wrapper) {
+      wrapper.style.backgroundColor = wrapperBg;
+    }
+    if (badge) {
+      badge.style.color = isDark ? "#ffd18d" : "#8a4b00";
+    }
+    this.content.querySelectorAll(".detail").forEach((el) => {
+      el.style.backgroundColor = detailBg;
+    });
+    this.content.querySelectorAll(".detail span, .label, .value").forEach((el) => {
+      el.style.color = detailText;
+    });
+  }
+
   setDetails(entities) {
     this.setText("detail-today-energy", this.formatStateValue(entities.details_today_energy));
     this.setText("detail-grid-energy", this.formatStateValue(entities.details_grid_energy));
@@ -373,6 +417,20 @@ class CustomFlowCard extends HTMLElement {
       return value;
     }
     return `${value} ${unit}`;
+  }
+
+  updateGatewayStatus(entities) {
+    const badge = this.content.getElementById("status-badge");
+    if (!badge) return;
+    const state = this.readState(entities.gateway_status);
+    if (!state) {
+      badge.hidden = true;
+      return;
+    }
+    const val = String(state.state || "").toLowerCase();
+    const offline = ["offline", "off", "unavailable", "unknown"].includes(val);
+    badge.hidden = !offline;
+    badge.textContent = offline ? `Data source offline (${state.state})` : "";
   }
 
   readNumber(entityId) {
@@ -555,7 +613,6 @@ class CustomFlowCardEditor extends HTMLElement {
 
     const cfg = this._config || {};
     const entities = cfg.entities || {};
-    const entityOptions = this.buildEntityOptions();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -586,6 +643,12 @@ class CustomFlowCardEditor extends HTMLElement {
           color: var(--primary-text-color);
           background: var(--card-background-color);
         }
+        ha-entity-picker {
+          width: 100%;
+        }
+        .picker-wrap {
+          margin-top: 6px;
+        }
         .hint {
           color: var(--secondary-text-color);
           line-height: 1.5;
@@ -598,7 +661,6 @@ class CustomFlowCardEditor extends HTMLElement {
           font-weight: 600;
         }
       </style>
-      <datalist id="entity-list">${entityOptions}</datalist>
       <div class="grid">
         ${this.field("title", "Title", cfg.title || "V-Guard Inverter Flow")}
         ${this.select("appearance", "Appearance", cfg.appearance || "light", [
@@ -627,22 +689,27 @@ class CustomFlowCardEditor extends HTMLElement {
         ${this.field("entities.details_temperature", "System Temperature", entities.details_temperature || "")}
         ${this.field("entities.details_power_cuts_today", "Power Cuts Today", entities.details_power_cuts_today || "")}
         ${this.field("entities.details_ble_status", "BLE Status", entities.details_ble_status || "")}
+        ${this.field("entities.gateway_status", "Gateway Status (offline detection)", entities.gateway_status || "")}
       </div>
       <div class="hint">
-        Tip: values auto-complete from existing entities. You can still switch to YAML mode for advanced icon customization.
+        Tip: use the built-in entity picker under each entity field for reliable selection. You can still switch to YAML mode for advanced icon customization.
       </div>
     `;
 
     this.shadowRoot.querySelectorAll("input[data-path],select[data-path]").forEach((el) => {
       el.addEventListener("change", (event) => this.handleInput(event));
     });
+    this.bindEntityPickers();
   }
 
   field(path, label, value) {
     return `
       <div class="field">
         <label for="${path}">${label}</label>
-        <input id="${path}" data-path="${path}" list="entity-list" value="${value}" />
+        <input id="${path}" data-path="${path}" value="${value}" />
+        ${path.startsWith("entities.")
+          ? `<div class="picker-wrap"><ha-entity-picker data-picker-path="${path}"></ha-entity-picker></div>`
+          : ""}
       </div>
     `;
   }
@@ -659,17 +726,6 @@ class CustomFlowCardEditor extends HTMLElement {
         </select>
       </div>
     `;
-  }
-
-  buildEntityOptions() {
-    if (!this._hass || !this._hass.states) {
-      return "";
-    }
-
-    return Object.keys(this._hass.states)
-      .sort()
-      .map((entityId) => `<option value="${entityId}"></option>`)
-      .join("");
   }
 
   handleInput(event) {
@@ -697,6 +753,29 @@ class CustomFlowCardEditor extends HTMLElement {
       bubbles: true,
       composed: true
     }));
+  }
+
+  bindEntityPickers() {
+    if (!this._hass) return;
+    this.shadowRoot.querySelectorAll("ha-entity-picker[data-picker-path]").forEach((picker) => {
+      const path = picker.dataset.pickerPath;
+      if (!path) return;
+      picker.hass = this._hass;
+      picker.value = this.getPathValue(path) || "";
+      picker.addEventListener("value-changed", (event) => {
+        const value = event.detail?.value || "";
+        const input = this.shadowRoot.querySelector(`input[data-path="${path}"]`);
+        if (input) input.value = value;
+        this.handleInput({ target: { dataset: { path }, value } });
+      });
+    });
+  }
+
+  getPathValue(path) {
+    if (path === "title") return this._config?.title || "";
+    if (!path.startsWith("entities.")) return "";
+    const key = path.replace("entities.", "");
+    return this._config?.entities?.[key] || "";
   }
 }
 

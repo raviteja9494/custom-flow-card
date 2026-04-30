@@ -52,6 +52,7 @@ entities:
   battery_voltage: sensor.v_guard_inverter_battery_voltage
   solar_current: sensor.v_guard_inverter_solar_current
   mains_voltage: sensor.v_guard_inverter_mains_voltage
+  gateway_status: sensor.v_guard_inverter_inverter_ble_status
 icons:
   grid: mdi:transmission-tower
   inverter: mdi:power
@@ -89,6 +90,7 @@ You can still use YAML for advanced keys like custom icons.
 - `entities.details_temperature` (optional): Details strip item, inverter/system temperature.
 - `entities.details_power_cuts_today` (optional): Details strip item, power cut count.
 - `entities.details_ble_status` (optional): Details strip item, BLE connectivity state.
+- `entities.gateway_status` (optional): Shows offline badge when this entity is `offline`, `off`, `unavailable`, or `unknown`.
 
 ## Notes
 
@@ -97,6 +99,7 @@ You can still use YAML for advanced keys like custom icons.
 - `kW` values are automatically converted to `W` internally.
 - Node labels show both calculated output and formula source (example: `620 W | 2.69A x 230V`).
 - Direct power entity is used first when present; formula-based fallback is used when direct power is missing.
+- Visual editor now includes HA-native entity picker controls under each entity field for easier selection.
 - Default appearance is `light`. Set `appearance: dark` if you prefer dark mode.
 - Native Home Assistant Energy Dashboard cannot be directly modified with custom cards; this custom card is the right approach for inverter-specific logic.
 - Recommended setup: use this card for inverter-only visualization, and keep overall home energy tracking in Home Assistant Energy Dashboard.
