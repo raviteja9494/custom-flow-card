@@ -24,6 +24,10 @@ class CustomFlowCard extends HTMLElement {
         details_temperature: "sensor.v_guard_inverter_system_temperature",
         details_power_cuts_today: "sensor.v_guard_inverter_power_cuts_today",
         details_ble_status: "sensor.v_guard_inverter_inverter_ble_status",
+        details_battery_remaining: "sensor.v_guard_inverter_battery_remaining",
+        details_cutoff_remaining: "sensor.v_guard_inverter_cutoff_remaining",
+        details_load_percentage: "sensor.v_guard_inverter_load_percentage",
+        details_solar_savings: "sensor.v_guard_inverter_solar_savings_today",
         gateway_status: "sensor.v_guard_inverter_inverter_ble_status"
       },
       icons: {
@@ -123,6 +127,11 @@ class CustomFlowCard extends HTMLElement {
           <div class="detail"><span class="k">Temp</span><span id="detail-temp">--</span></div>
           <div class="detail"><span class="k">Cuts</span><span id="detail-cuts">--</span></div>
           <div class="detail"><span class="k">BLE</span><span id="detail-ble">--</span></div>
+          <div class="detail"><span class="k">Battery Left</span><span id="detail-battery-remaining">--</span></div>
+          <div class="detail"><span class="k">Cutoff Left</span><span id="detail-cutoff-remaining">--</span></div>
+          <div class="detail"><span class="k">Load %</span><span id="detail-load-percentage">--</span></div>
+          <div class="detail"><span class="k">Solar Today</span><span id="detail-solar-savings">--</span></div>
+          <div class="detail"><span class="k">Mains V</span><span id="detail-mains-voltage">--</span></div>
         </div>
       </ha-card>
       <style>
@@ -250,6 +259,8 @@ class CustomFlowCard extends HTMLElement {
           opacity: 0.95;
           word-break: break-word;
           color: var(--flow-text);
+          max-height: 2.6em;
+          overflow: hidden;
         }
 
         .node-grid ha-icon { color: var(--flow-grid); }
@@ -290,6 +301,32 @@ class CustomFlowCard extends HTMLElement {
           word-break: break-word;
           text-align: center;
           color: var(--flow-text);
+        }
+
+        @media (max-width: 480px) {
+          :host {
+            --flow-node-size: 58px;
+          }
+
+          .wrapper {
+            height: 250px;
+            padding: 6px 6px 10px;
+          }
+
+          #node-grid { left: 6px !important; top: 94px !important; }
+          #node-solar { left: 124px !important; top: 18px !important; }
+          #node-inverter { left: 124px !important; top: 94px !important; }
+          #node-battery { left: 124px !important; top: 170px !important; }
+          #node-home { left: 242px !important; top: 94px !important; }
+
+          .flow-svg {
+            transform: scale(0.88);
+            transform-origin: center;
+          }
+
+          .details {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
         }
       </style>
     `;
@@ -403,6 +440,11 @@ class CustomFlowCard extends HTMLElement {
     this.setText("detail-temp", this.formatStateValue(entities.details_temperature));
     this.setText("detail-cuts", this.formatStateValue(entities.details_power_cuts_today));
     this.setText("detail-ble", this.formatStateValue(entities.details_ble_status));
+    this.setText("detail-battery-remaining", this.formatStateValue(entities.details_battery_remaining));
+    this.setText("detail-cutoff-remaining", this.formatStateValue(entities.details_cutoff_remaining));
+    this.setText("detail-load-percentage", this.formatStateValue(entities.details_load_percentage));
+    this.setText("detail-solar-savings", this.formatStateValue(entities.details_solar_savings));
+    this.setText("detail-mains-voltage", this.formatStateValue(entities.mains_voltage));
   }
 
   formatStateValue(entityId) {
@@ -689,6 +731,10 @@ class CustomFlowCardEditor extends HTMLElement {
         ${this.field("entities.details_temperature", "System Temperature", entities.details_temperature || "")}
         ${this.field("entities.details_power_cuts_today", "Power Cuts Today", entities.details_power_cuts_today || "")}
         ${this.field("entities.details_ble_status", "BLE Status", entities.details_ble_status || "")}
+        ${this.field("entities.details_battery_remaining", "Battery Remaining", entities.details_battery_remaining || "")}
+        ${this.field("entities.details_cutoff_remaining", "Cutoff Remaining", entities.details_cutoff_remaining || "")}
+        ${this.field("entities.details_load_percentage", "Load Percentage", entities.details_load_percentage || "")}
+        ${this.field("entities.details_solar_savings", "Solar Savings Today", entities.details_solar_savings || "")}
         ${this.field("entities.gateway_status", "Gateway Status (offline detection)", entities.gateway_status || "")}
       </div>
       <div class="hint">
