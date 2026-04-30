@@ -43,6 +43,7 @@ type: custom:custom-flow-card
 title: V-Guard Inverter Flow
 appearance: light
 grid_online_voltage_min: 90
+solar_day_target_kwh: 5
 entities:
   grid_power: sensor.inverter_in_1_power
   grid_current: sensor.shellyplus2pm_b0b21c108704_output_0_current
@@ -98,6 +99,7 @@ You can still use YAML for advanced keys like custom icons.
 - `entities.battery_percent` (optional): Battery percentage label and icon.
 - `entities.battery_voltage` (optional): Extra battery metric label.
 - `grid_online_voltage_min` (optional): Voltage threshold for considering grid/mains available. Default is `90`, so mains cutoff hides the grid flow.
+- `solar_day_target_kwh` (optional): Target used only for the tiny solar-today progress bar. Default is `5`.
 - `entities.details_today_energy` (optional): Details strip item, output energy today.
 - `entities.details_grid_energy` (optional): Details strip item, grid energy today.
 - `entities.details_temperature` (optional): Details strip item, inverter/system temperature.
@@ -110,6 +112,7 @@ You can still use YAML for advanced keys like custom icons.
 - Card keeps the Home Assistant Energy Dashboard-style circles and arrows.
 - The contribution strip shows how much of the current load comes from solar, grid, and battery.
 - Details include inverter `In Power`, `Out Power`, and `In - Out`; negative balance is shown as backup output during mains cutoff.
+- Battery labels include percentage while charging/discharging, and `In - Out` shows `Backup 133 W` instead of a negative watt value.
 - Battery flow direction is inferred from power balance: `load - grid supply - solar supply`.
 - When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show `Mains cutoff | Solar 420 W + Battery 280 W -> Load 700 W`.
 - `kW` values are automatically converted to `W` internally.
