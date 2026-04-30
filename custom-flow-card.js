@@ -80,8 +80,8 @@ class CustomFlowCard extends HTMLElement {
         <div class="wrapper">
           <svg viewBox="0 0 100 100" class="flow-svg" role="img" aria-label="Power flow">
             <defs>
-              <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                <path d="M0,0 L8,4 L0,8 z" fill="currentColor"></path>
+              <marker id="arrow" markerWidth="5" markerHeight="5" refX="4.6" refY="2.5" orient="auto">
+                <path d="M0,0 L5,2.5 L0,5 z" fill="currentColor"></path>
               </marker>
             </defs>
 
@@ -203,20 +203,22 @@ class CustomFlowCard extends HTMLElement {
           height: 100%;
           color: var(--flow-ok);
           opacity: 0.85;
+          position: relative;
+          z-index: 1;
         }
 
         .flow-line {
           stroke: currentColor;
-          stroke-width: 3.5;
+          stroke-width: 2;
           stroke-opacity: 0.9;
           stroke-linecap: round;
           marker-end: url(#arrow);
           transition: opacity 0.25s ease;
-          opacity: 0.2;
+          opacity: 0.14;
         }
 
         .flow-line.active {
-          opacity: 1;
+          opacity: 0.75;
           animation: pulse 1.2s ease infinite;
         }
 
@@ -226,9 +228,9 @@ class CustomFlowCard extends HTMLElement {
         }
 
         @keyframes pulse {
-          0% { stroke-width: 3.5; }
-          50% { stroke-width: 5; }
-          100% { stroke-width: 3.5; }
+          0% { stroke-width: 2; }
+          50% { stroke-width: 2.8; }
+          100% { stroke-width: 2; }
         }
 
         .node {
@@ -236,6 +238,7 @@ class CustomFlowCard extends HTMLElement {
           left: var(--x);
           top: var(--y);
           transform: translate(-50%, -50%);
+          z-index: 2;
           width: var(--flow-node-size);
           min-height: var(--flow-node-size);
           border-radius: 50%;
