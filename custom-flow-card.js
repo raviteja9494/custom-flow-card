@@ -11,6 +11,10 @@ class CustomFlowCard extends HTMLElement {
         grid_power: "sensor.inverter_in_1_power",
         inverter_output_power: "sensor.inverter_out_power",
         load_power: "sensor.inverter_out_power",
+        grid_current: "sensor.shellyplus2pm_b0b21c108704_output_0_current",
+        grid_voltage: "sensor.shellyplus2pm_b0b21c108704_output_0_voltage",
+        load_current: "sensor.v_guard_inverter_load_current",
+        load_voltage: "sensor.shellypmmini_348518e0a2a4_voltage",
         battery_percent: "sensor.v_guard_inverter_battery_percentage",
         battery_voltage: "sensor.v_guard_inverter_battery_voltage",
         solar_current: "sensor.v_guard_inverter_solar_current",
@@ -27,13 +31,21 @@ class CustomFlowCard extends HTMLElement {
         battery: "mdi:battery",
         home: "mdi:home-lightning-bolt",
         solar: "mdi:solar-power"
-      }
+      },
+      appearance: "light"
     };
   }
 
   setConfig(config) {
-    if (!config.entities || !config.entities.grid_power || !config.entities.inverter_output_power) {
-      throw new Error("You need to define at least entities.grid_power and entities.inverter_output_power");
+    const entities = config.entities || {};
+    const hasGridData = Boolean(entities.grid_power) || (Boolean(entities.grid_current) && Boolean(entities.grid_voltage));
+    const hasLoadData = Boolean(entities.load_power) || (Boolean(entities.load_current) && Boolean(entities.load_voltage));
+    const hasOutputData = Boolean(entities.inverter_output_power) || hasLoadData;
+
+    if (!hasGridData || !hasOutputData) {
+      throw new Error(
+        "Define grid data (entities.grid_power or entities.grid_current + entities.grid_voltage) and output data (entities.inverter_output_power or load sensors)"
+      );
     }
 
     this._config = {
@@ -121,7 +133,18 @@ class CustomFlowCard extends HTMLElement {
           --flow-home: #fb8c00;
           --flow-solar: #fbc02d;
           --flow-inverter: #3949ab;
+          --flow-bg: #f8fafc;
+          --flow-text: #25324d;
+          --flow-detail-bg: #ffffff;
+          --flow-node-bg: #ffffff;
           display: block;
+        }
+
+        :host([appearance="dark"]) {
+          --flow-bg: #181d29;
+          --flow-text: #dbe4f5;
+          --flow-detail-bg: #20293a;
+          --flow-node-bg: var(--ha-card-background, var(--card-background-color));
         }
 
         .card-header {
@@ -136,6 +159,9 @@ class CustomFlowCard extends HTMLElement {
           height: 220px;
           padding: 6px 10px 14px;
           overflow: hidden;
+          background: var(--flow-bg);
+          border-radius: 10px;
+          margin: 8px 12px 0;
         }
 
         .flow-svg {
@@ -175,7 +201,7 @@ class CustomFlowCard extends HTMLElement {
           width: var(--flow-node-size);
           min-height: var(--flow-node-size);
           border-radius: 50%;
-          background: var(--ha-card-background, var(--card-background-color));
+          background: var(--flow-node-bg);
           border: 2px solid var(--divider-color, rgba(128, 128, 128, 0.4));
           box-shadow: var(--ha-card-box-shadow, none);
           display: flex;
@@ -196,13 +222,15 @@ class CustomFlowCard extends HTMLElement {
           font-size: 0.72rem;
           line-height: 1rem;
           opacity: 0.85;
+          color: var(--flow-text);
         }
 
         .value {
           font-size: 0.66rem;
-          line-height: 0.9rem;
+          line-height: 0.84rem;
           opacity: 0.95;
           word-break: break-word;
+          color: var(--flow-text);
         }
 
         .node-grid ha-icon { color: var(--flow-grid); }
@@ -225,7 +253,7 @@ class CustomFlowCard extends HTMLElement {
           flex-direction: column;
           align-items: center;
           border-radius: 8px;
-          background: color-mix(in srgb, var(--ha-card-background, #111) 85%, var(--primary-text-color, #fff) 6%);
+          background: var(--flow-detail-bg);
           padding: 7px 6px;
           line-height: 1.15;
         }
@@ -234,12 +262,14 @@ class CustomFlowCard extends HTMLElement {
           font-size: 0.64rem;
           opacity: 0.75;
           margin-bottom: 4px;
+          color: var(--flow-text);
         }
 
         .detail span:last-child {
           font-size: 0.72rem;
           word-break: break-word;
           text-align: center;
+          color: var(--flow-text);
         }
       </style>
     `;
@@ -253,15 +283,21 @@ class CustomFlowCard extends HTMLElement {
     }
 
     const cfg = this._config;
+    this.setAppearance(cfg.appearance || "light");
     const entities = cfg.entities || {};
     const icons = cfg.icons || {};
 
     this.content.getElementById("title").textContent = cfg.title || "Power Flow";
 
-    const gridPower = this.readPower(entities.grid_power);
-    const inverterOutputPower = this.readPower(entities.inverter_output_power);
-    const loadPower = this.readPower(entities.load_power ?? entities.inverter_output_power);
-    const solarPower = this.resolveSolarPower(entities);
+    const gridResult = this.resolvePowerWithFormula(entities.grid_power, entities.grid_current, entities.grid_voltage, entities.mains_voltage);
+    const loadResult = this.resolvePowerWithFormula(entities.load_power, entities.load_current, entities.load_voltage, entities.mains_voltage);
+    const inverterOutputResult = this.resolveInverterOutputPower(entities, loadResult);
+    const solarResult = this.resolveSolarPower(entities);
+
+    const gridPower = gridResult.power;
+    const inverterOutputPower = inverterOutputResult.power;
+    const loadPower = loadResult.power;
+    const solarPower = solarResult.power;
     const batteryPercent = this.readNumber(entities.battery_percent);
     const batteryVoltage = this.readNumber(entities.battery_voltage);
 
@@ -274,14 +310,14 @@ class CustomFlowCard extends HTMLElement {
     this.setIcon("icon-home", icons.home || "mdi:home-lightning-bolt");
     this.setIcon("icon-solar", icons.solar || "mdi:solar-power");
 
-    this.setText("value-grid", this.formatPower(gridPower));
-    this.setText("value-inverter", this.formatPower(inverterOutputPower));
+    this.setText("value-grid", this.formatNodeValue(gridPower, gridResult.formulaText));
+    this.setText("value-inverter", this.formatNodeValue(inverterOutputPower, inverterOutputResult.formulaText));
     this.setText(
       "value-battery",
       `${this.safePercent(batteryPercent)}${Number.isFinite(batteryVoltage) ? ` | ${batteryVoltage.toFixed(1)}V` : ""}`
     );
-    this.setText("value-home", this.formatPower(loadPower));
-    this.setText("value-solar", this.formatPower(solarPower));
+    this.setText("value-home", this.formatNodeValue(loadPower, loadResult.formulaText));
+    this.setText("value-solar", this.formatNodeValue(solarPower, solarResult.formulaText));
 
     this.setDetails(entities);
 
@@ -304,6 +340,17 @@ class CustomFlowCard extends HTMLElement {
       return null;
     }
     return this._hass.states[entityId];
+  }
+
+  setAppearance(mode) {
+    if (!this.content) return;
+    const host = this.content.host;
+    if (!host) return;
+    if (mode === "dark") {
+      host.setAttribute("appearance", "dark");
+    } else {
+      host.removeAttribute("appearance");
+    }
   }
 
   setDetails(entities) {
@@ -354,19 +401,78 @@ class CustomFlowCard extends HTMLElement {
     return value;
   }
 
+  resolveInverterOutputPower(entities, loadResult) {
+    if (entities.inverter_output_power) {
+      return {
+        power: this.readPower(entities.inverter_output_power),
+        formulaText: "direct power sensor"
+      };
+    }
+    return {
+      power: loadResult.power,
+      formulaText: loadResult.formulaText || "derived from load"
+    };
+  }
+
   resolveSolarPower(entities) {
     if (entities.solar_power) {
-      return this.readPower(entities.solar_power);
+      return {
+        power: this.readPower(entities.solar_power),
+        formulaText: "direct power sensor"
+      };
     }
 
     const current = this.readNumber(entities.solar_current);
-    const mainsVoltage = this.readNumber(entities.mains_voltage);
-    const fallbackVoltage = Number.isFinite(mainsVoltage) ? mainsVoltage : 230;
+    const solarVoltage = this.pickBestVoltage([
+      entities.solar_voltage,
+      entities.mains_voltage,
+      entities.grid_voltage
+    ]);
 
-    if (!Number.isFinite(current)) {
-      return 0;
+    if (!Number.isFinite(current) || !Number.isFinite(solarVoltage)) {
+      return { power: 0, formulaText: "" };
     }
-    return current * fallbackVoltage;
+    return {
+      power: current * solarVoltage,
+      formulaText: `${current.toFixed(2)}A x ${solarVoltage.toFixed(0)}V`
+    };
+  }
+
+  resolvePowerWithFormula(powerEntity, currentEntity, voltageEntity, fallbackVoltageEntity) {
+    if (powerEntity) {
+      return {
+        power: this.readPower(powerEntity),
+        formulaText: "direct power sensor"
+      };
+    }
+
+    const current = this.readNumber(currentEntity);
+    const voltage = this.pickBestVoltage([voltageEntity, fallbackVoltageEntity]);
+
+    if (!Number.isFinite(current) || !Number.isFinite(voltage)) {
+      return { power: 0, formulaText: "" };
+    }
+
+    return {
+      power: current * voltage,
+      formulaText: `${current.toFixed(2)}A x ${voltage.toFixed(0)}V`
+    };
+  }
+
+  pickBestVoltage(entityIds) {
+    for (const entityId of entityIds) {
+      const value = this.readNumber(entityId);
+      if (Number.isFinite(value) && value > 0) {
+        return value;
+      }
+    }
+    return NaN;
+  }
+
+  formatNodeValue(power, formulaText) {
+    const powerText = this.formatPower(power);
+    if (!formulaText) return powerText;
+    return `${powerText} | ${formulaText}`;
   }
 
   safePercent(value) {
@@ -470,7 +576,8 @@ class CustomFlowCardEditor extends HTMLElement {
           font-size: 0.85rem;
           color: var(--secondary-text-color);
         }
-        .field input {
+        .field input,
+        .field select {
           box-sizing: border-box;
           width: 100%;
           padding: 8px;
@@ -494,13 +601,22 @@ class CustomFlowCardEditor extends HTMLElement {
       <datalist id="entity-list">${entityOptions}</datalist>
       <div class="grid">
         ${this.field("title", "Title", cfg.title || "V-Guard Inverter Flow")}
+        ${this.select("appearance", "Appearance", cfg.appearance || "light", [
+          ["light", "Light (default)"],
+          ["dark", "Dark"]
+        ])}
 
         <div class="section">Flow Entities</div>
-        ${this.field("entities.grid_power", "Grid Power (required)", entities.grid_power || "")}
-        ${this.field("entities.inverter_output_power", "Inverter Output Power (required)", entities.inverter_output_power || "")}
+        ${this.field("entities.grid_power", "Grid Power (optional direct)", entities.grid_power || "")}
+        ${this.field("entities.grid_current", "Grid Current", entities.grid_current || "")}
+        ${this.field("entities.grid_voltage", "Grid Voltage", entities.grid_voltage || "")}
+        ${this.field("entities.inverter_output_power", "Inverter Output Power (optional direct)", entities.inverter_output_power || "")}
         ${this.field("entities.load_power", "Load Power", entities.load_power || "")}
+        ${this.field("entities.load_current", "Load Current", entities.load_current || "")}
+        ${this.field("entities.load_voltage", "Load Voltage", entities.load_voltage || "")}
         ${this.field("entities.solar_power", "Solar Power", entities.solar_power || "")}
         ${this.field("entities.solar_current", "Solar Current", entities.solar_current || "")}
+        ${this.field("entities.solar_voltage", "Solar Voltage", entities.solar_voltage || "")}
         ${this.field("entities.mains_voltage", "Mains Voltage", entities.mains_voltage || "")}
         ${this.field("entities.battery_percent", "Battery Percentage", entities.battery_percent || "")}
         ${this.field("entities.battery_voltage", "Battery Voltage", entities.battery_voltage || "")}
@@ -517,7 +633,7 @@ class CustomFlowCardEditor extends HTMLElement {
       </div>
     `;
 
-    this.shadowRoot.querySelectorAll("input[data-path]").forEach((el) => {
+    this.shadowRoot.querySelectorAll("input[data-path],select[data-path]").forEach((el) => {
       el.addEventListener("change", (event) => this.handleInput(event));
     });
   }
@@ -527,6 +643,20 @@ class CustomFlowCardEditor extends HTMLElement {
       <div class="field">
         <label for="${path}">${label}</label>
         <input id="${path}" data-path="${path}" list="entity-list" value="${value}" />
+      </div>
+    `;
+  }
+
+  select(path, label, value, options) {
+    const opts = options
+      .map(([v, l]) => `<option value="${v}" ${value === v ? "selected" : ""}>${l}</option>`)
+      .join("");
+    return `
+      <div class="field">
+        <label for="${path}">${label}</label>
+        <select id="${path}" data-path="${path}">
+          ${opts}
+        </select>
       </div>
     `;
   }
@@ -549,6 +679,8 @@ class CustomFlowCardEditor extends HTMLElement {
 
     if (path === "title") {
       next.title = value;
+    } else if (path === "appearance") {
+      next.appearance = value || "light";
     } else if (path.startsWith("entities.")) {
       const key = path.replace("entities.", "");
       next.entities = next.entities || {};
