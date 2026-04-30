@@ -91,10 +91,6 @@ class CustomFlowCard extends HTMLElement {
             <line id="line-battery-inverter" x1="50" y1="58" x2="50" y2="80" class="flow-line"></line>
             <line id="line-inverter-home" x1="50" y1="50" x2="80" y2="50" class="flow-line"></line>
           </svg>
-          <div id="chip-grid-flow" class="flow-chip chip-grid" style="--x:35%;--y:43%;">Grid -> Inverter: --</div>
-          <div id="chip-solar-flow" class="flow-chip chip-solar" style="--x:50%;--y:30%;">Solar -> Inverter: --</div>
-          <div id="chip-battery-flow" class="flow-chip chip-battery" style="--x:50%;--y:70%;">Battery -> Inverter: --</div>
-          <div id="chip-load-flow" class="flow-chip chip-load" style="--x:65%;--y:57%;">Inverter -> Load: --</div>
 
           <div id="node-grid" class="node node-grid" style="--x:20%;--y:50%;">
             <ha-icon id="icon-grid"></ha-icon>
@@ -127,6 +123,11 @@ class CustomFlowCard extends HTMLElement {
           </div>
         </div>
         <div class="flow-status" id="flow-status"></div>
+        <div class="flow-breakdown">
+          <div class="breakdown-item solar"><span>Solar to load</span><strong id="breakdown-solar">--</strong></div>
+          <div class="breakdown-item grid"><span>Grid to load</span><strong id="breakdown-grid">--</strong></div>
+          <div class="breakdown-item battery"><span>Battery</span><strong id="breakdown-battery">--</strong></div>
+        </div>
         <div class="details" id="details-row">
           <div class="detail"><span class="k">Out Today</span><span id="detail-today-energy">--</span></div>
           <div class="detail"><span class="k">Grid Today</span><span id="detail-grid-energy">--</span></div>
@@ -146,7 +147,7 @@ class CustomFlowCard extends HTMLElement {
       </ha-card>
       <style>
         :host {
-          --flow-node-size: 84px;
+          --flow-node-size: 74px;
           --flow-ok: var(--success-color, #43a047);
           --flow-muted: var(--disabled-color, #8a8a8a);
           --flow-grid: #1e88e5;
@@ -279,8 +280,9 @@ class CustomFlowCard extends HTMLElement {
           font-size: 0.64rem;
           line-height: 0.8rem;
           opacity: 0.95;
-          white-space: normal;
+          white-space: nowrap;
           overflow: hidden;
+          text-overflow: ellipsis;
           max-width: 92%;
           color: var(--flow-text);
         }
@@ -290,38 +292,6 @@ class CustomFlowCard extends HTMLElement {
         .node-battery ha-icon { color: var(--flow-battery); }
         .node-home ha-icon { color: var(--flow-home); }
         .node-solar ha-icon { color: var(--flow-solar); }
-
-        .flow-chip {
-          position: absolute;
-          left: var(--x);
-          top: var(--y);
-          transform: translate(-50%, -50%);
-          z-index: 3;
-          max-width: 178px;
-          border-radius: 999px;
-          padding: 4px 8px;
-          background: var(--flow-detail-bg);
-          border: 1px solid var(--flow-border);
-          color: var(--flow-text);
-          font-size: 0.62rem;
-          line-height: 0.82rem;
-          text-align: center;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          opacity: 0.62;
-          box-shadow: 0 1px 4px rgba(18, 30, 55, 0.12);
-        }
-
-        .flow-chip.active {
-          opacity: 1;
-          font-weight: 600;
-        }
-
-        .chip-grid.active { border-color: var(--flow-grid); }
-        .chip-solar.active { border-color: var(--flow-solar); }
-        .chip-battery.active { border-color: var(--flow-battery); }
-        .chip-load.active { border-color: var(--flow-home); }
 
         .flow-status {
           margin: 10px 12px 0;
@@ -338,6 +308,47 @@ class CustomFlowCard extends HTMLElement {
           font-size: 0.76rem;
           line-height: 1.2rem;
         }
+
+        .flow-breakdown {
+          margin: 8px 12px 0;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .breakdown-item {
+          border-radius: 8px;
+          border: 1px solid var(--flow-border);
+          background: var(--flow-detail-bg);
+          color: var(--flow-text);
+          padding: 7px 8px;
+          min-width: 0;
+          text-align: center;
+          box-sizing: border-box;
+        }
+
+        .breakdown-item span {
+          display: block;
+          color: var(--flow-text);
+          opacity: 0.72;
+          font-size: 0.62rem;
+          line-height: 0.85rem;
+          margin-bottom: 3px;
+        }
+
+        .breakdown-item strong {
+          display: block;
+          font-size: 0.78rem;
+          line-height: 1rem;
+          color: var(--flow-text);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .breakdown-item.solar { border-color: rgba(251, 192, 45, 0.55); }
+        .breakdown-item.grid { border-color: rgba(30, 136, 229, 0.45); }
+        .breakdown-item.battery { border-color: rgba(142, 36, 170, 0.45); }
 
         .details {
           border-top: 1px solid var(--flow-border);
@@ -375,7 +386,7 @@ class CustomFlowCard extends HTMLElement {
 
         @media (max-width: 480px) {
           :host {
-            --flow-node-size: 76px;
+            --flow-node-size: 68px;
           }
 
           .wrapper {
@@ -389,19 +400,12 @@ class CustomFlowCard extends HTMLElement {
           #node-battery { --x: 50%; --y: 82%; }
           #node-home { --x: 84%; --y: 50%; }
 
-          #chip-grid-flow { --x: 33%; --y: 41%; }
-          #chip-solar-flow { --x: 50%; --y: 31%; }
-          #chip-battery-flow { --x: 50%; --y: 70%; }
-          #chip-load-flow { --x: 67%; --y: 60%; }
-
-          .flow-chip {
-            max-width: 142px;
-            font-size: 0.58rem;
-            padding: 3px 6px;
-          }
-
           .details {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .flow-breakdown {
+            grid-template-columns: 1fr;
           }
         }
       </style>
@@ -465,6 +469,14 @@ class CustomFlowCard extends HTMLElement {
 
     this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower);
     this.updateGatewayStatus(entities);
+    this.updateBreakdown({
+      gridOnline,
+      solarToLoad,
+      gridToLoad,
+      batteryToLoad,
+      batteryChargingPower,
+      batteryState
+    });
     this.updateFlowStatus({
       gridOnline,
       gridPower,
@@ -476,15 +488,6 @@ class CustomFlowCard extends HTMLElement {
       gridToLoad,
       batteryToLoad,
       batteryChargingPower
-    });
-    this.updateFlowChips({
-      gridOnline,
-      loadDemand,
-      solarToLoad,
-      gridToLoad,
-      batteryToLoad,
-      batteryChargingPower,
-      batteryState
     });
 
     this.applyFlow("line-grid-inverter", gridOnline && gridToLoad > 5, gridPower < 0);
@@ -536,46 +539,49 @@ class CustomFlowCard extends HTMLElement {
     this.setText("detail-battery-calc", this.formatBatteryPower(batteryPower));
   }
 
+  updateBreakdown({ gridOnline, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower, batteryState }) {
+    this.setText("breakdown-solar", this.formatPower(solarToLoad));
+    this.setText("breakdown-grid", gridOnline ? this.formatPower(gridToLoad) : "Cutoff");
+
+    if (batteryState === "charging") {
+      this.setText("breakdown-battery", `${this.formatPower(batteryChargingPower)} charging`);
+      return;
+    }
+    if (batteryToLoad > 5) {
+      this.setText("breakdown-battery", `${this.formatPower(batteryToLoad)} discharging`);
+      return;
+    }
+    this.setText("breakdown-battery", "Idle");
+  }
+
   updateFlowStatus({ gridOnline, gridPower, solarPower, batteryPower, batteryState, loadDemand, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower }) {
     const node = this.content.getElementById("flow-status");
     if (!node) return;
 
     const sources = [];
     if (solarToLoad > 5) {
-      sources.push(`solar ${this.formatPower(solarToLoad)}`);
+      sources.push(`Solar ${this.formatPower(solarToLoad)}`);
     }
     if (gridOnline && gridToLoad > 5) {
-      sources.push(`grid ${this.formatPower(gridToLoad)}`);
+      sources.push(`Grid ${this.formatPower(gridToLoad)}`);
     }
     if (batteryToLoad > 5) {
-      sources.push(`battery ${this.formatPower(batteryToLoad)}`);
+      sources.push(`Battery ${this.formatPower(batteryToLoad)}`);
     }
 
     const prefix = !gridOnline ? "Mains cutoff | " : "";
 
     if (batteryState === "charging") {
-      node.textContent = `${prefix}Load ${this.formatPower(loadDemand)} from ${sources.join(" + ") || "available supply"}; extra ${this.formatPower(batteryChargingPower)} charges battery`;
+      node.textContent = `${prefix}${sources.join(" + ") || "Supply"} -> Load ${this.formatPower(loadDemand)} | Battery charging ${this.formatPower(batteryChargingPower)}`;
       return;
     }
 
     if (sources.length) {
-      node.textContent = `${prefix}Load ${this.formatPower(loadDemand)} from ${sources.join(" + ")}`;
+      node.textContent = `${prefix}${sources.join(" + ")} -> Load ${this.formatPower(loadDemand)}`;
       return;
     }
 
     node.textContent = gridOnline ? "No active load flow detected" : "Mains cutoff | Waiting for solar or battery flow";
-  }
-
-  updateFlowChips({ gridOnline, loadDemand, solarToLoad, gridToLoad, batteryToLoad, batteryChargingPower, batteryState }) {
-    this.setFlowChip("chip-solar-flow", `Solar -> Inverter: ${this.formatPower(solarToLoad)}`, solarToLoad > 5);
-    this.setFlowChip("chip-grid-flow", gridOnline ? `Grid -> Inverter: ${this.formatPower(gridToLoad)}` : "Grid: mains cutoff", gridOnline && gridToLoad > 5);
-    this.setFlowChip("chip-load-flow", `Inverter -> Load: ${this.formatPower(loadDemand)}`, loadDemand > 5);
-
-    if (batteryState === "charging") {
-      this.setFlowChip("chip-battery-flow", `Inverter -> Battery: ${this.formatPower(batteryChargingPower)}`, batteryChargingPower > 5);
-    } else {
-      this.setFlowChip("chip-battery-flow", `Battery -> Inverter: ${this.formatPower(batteryToLoad)}`, batteryToLoad > 5);
-    }
   }
 
   formatStateValue(entityId) {
@@ -790,20 +796,12 @@ class CustomFlowCard extends HTMLElement {
   formatBatteryNodeValue(batteryState, batteryToLoad, batteryChargingPower, batteryPercent) {
     const percent = this.safePercent(batteryPercent);
     if (batteryState === "discharging" && batteryToLoad > 5) {
-      return `${this.formatPower(batteryToLoad)} out | ${percent}`;
+      return `${this.formatPower(batteryToLoad)} out`;
     }
     if (batteryState === "charging" && batteryChargingPower > 5) {
-      return `${this.formatPower(batteryChargingPower)} in | ${percent}`;
+      return `${this.formatPower(batteryChargingPower)} in`;
     }
     return percent;
-  }
-
-  setFlowChip(id, text, active) {
-    this.setText(id, text);
-    const node = this.content.getElementById(id);
-    if (node) {
-      node.classList.toggle("active", Boolean(active));
-    }
   }
 
   applyFlow(id, active, reverse) {

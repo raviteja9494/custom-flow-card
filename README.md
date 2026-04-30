@@ -10,7 +10,7 @@ Works well for setups like:
 
 ## Preview
 
-The card keeps the familiar Home Assistant Energy-style node and arrow flow, with extra labels on each path so it is easier to read.
+Yes, the flow rendering is SVG-based inside the card, in the same Home Assistant Energy Dashboard-style node layout.
 
 ![Custom Flow Card Preview](./preview.svg)
 
@@ -105,11 +105,12 @@ You can still use YAML for advanced keys like custom icons.
 
 ## Notes
 
-- Card keeps the Energy-style diagram and adds inline flow labels such as `Solar -> Inverter: 420 W`.
+- Card keeps the Home Assistant Energy Dashboard-style circles and arrows.
+- The contribution strip shows how much of the current load comes from solar, grid, and battery.
 - Battery flow direction is inferred from power balance: `load - grid supply - solar supply`.
-- When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show `Mains cutoff | Load 700 W from solar 420 W + battery 280 W`.
+- When mains voltage is below `grid_online_voltage_min`, the card treats grid as unavailable and can show `Mains cutoff | Solar 420 W + Battery 280 W -> Load 700 W`.
 - `kW` values are automatically converted to `W` internally.
-- Details show calculation sources such as `2.69A x 230V` so you can verify where the numbers came from.
+- Node labels show both calculated output and formula source (example: `620 W | 2.69A x 230V`).
 - Direct power entity is used first when present; formula-based fallback is used when direct power is missing.
 - Visual editor now includes HA-native entity picker controls under each entity field for easier selection.
 - Default appearance is `light`. Set `appearance: dark` if you prefer dark mode.
