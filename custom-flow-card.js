@@ -33,6 +33,7 @@ class CustomFlowCard extends HTMLElement {
         gateway_status: "sensor.v_guard_inverter_inverter_ble_status"
       },
       grid_online_voltage_min: 90,
+      branch_devices: ["Airconditioner", "Washing machine", "Remaining untracked"],
       icons: {
         grid: "mdi:transmission-tower",
         inverter: "mdi:power",
@@ -95,6 +96,10 @@ class CustomFlowCard extends HTMLElement {
             <path id="line-solar-inverter" d="M50,24 L50,42" class="flow-line"></path>
             <path id="line-battery-inverter" d="M50,76 L50,58" class="flow-line flow-battery"></path>
             <path id="line-inverter-home" d="M58,50 L80,50" class="flow-line"></path>
+            <path id="line-mains-branch" d="M20,58 L20,85 L56,85" class="flow-line flow-muted"></path>
+            <path id="line-branch-device-1" d="M56,70 L78,70" class="flow-line flow-muted"></path>
+            <path id="line-branch-device-2" d="M56,79 L78,79" class="flow-line flow-muted"></path>
+            <path id="line-branch-device-3" d="M56,88 L78,88" class="flow-line flow-muted"></path>
           </svg>
 
           <div id="node-grid" class="node node-grid" style="--x:20%;--y:50%;">
@@ -126,6 +131,16 @@ class CustomFlowCard extends HTMLElement {
             <div class="label">Load</div>
             <div class="value" id="value-home"></div>
           </div>
+
+          <div class="device-block" id="device-block-1" style="--x:86%;--y:70%;">
+            <div class="device-name" id="device-name-1">Airconditioner</div>
+          </div>
+          <div class="device-block" id="device-block-2" style="--x:86%;--y:79%;">
+            <div class="device-name" id="device-name-2">Washing machine</div>
+          </div>
+          <div class="device-block" id="device-block-3" style="--x:86%;--y:88%;">
+            <div class="device-name" id="device-name-3">Remaining untracked</div>
+          </div>
         </div>
         <div class="flow-status" id="flow-status"></div>
         <div class="solar-current-panel" id="solar-current-panel" hidden>
@@ -145,21 +160,10 @@ class CustomFlowCard extends HTMLElement {
         <div class="details" id="details-row">
           <div class="detail"><span class="k">Out Today</span><span id="detail-today-energy">--</span></div>
           <div class="detail"><span class="k">Mains Today</span><span id="detail-grid-energy">--</span></div>
+          <div class="detail"><span class="k">Solar Today</span><span id="detail-solar-savings">--</span></div>
           <div class="detail"><span class="k">Temp</span><span id="detail-temp">--</span></div>
           <div class="detail"><span class="k">Cuts</span><span id="detail-cuts">--</span></div>
           <div class="detail"><span class="k">BLE</span><span id="detail-ble">--</span></div>
-          <div class="detail"><span class="k">Battery Left</span><span id="detail-battery-remaining">--</span></div>
-          <div class="detail"><span class="k">Cutoff Left</span><span id="detail-cutoff-remaining">--</span></div>
-          <div class="detail"><span class="k">Load %</span><span id="detail-load-percentage">--</span></div>
-          <div class="detail"><span class="k">Solar Today</span><span id="detail-solar-savings">--</span></div>
-          <div class="detail"><span class="k">Mains V</span><span id="detail-mains-voltage">--</span></div>
-          <div class="detail"><span class="k">Mains Calc</span><span id="detail-grid-calc">--</span></div>
-          <div class="detail"><span class="k">Load Calc</span><span id="detail-load-calc">--</span></div>
-          <div class="detail"><span class="k">Solar Calc</span><span id="detail-solar-calc">--</span></div>
-          <div class="detail"><span class="k">Battery Calc</span><span id="detail-battery-calc">--</span></div>
-          <div class="detail"><span class="k">In Power</span><span id="detail-in-power">--</span></div>
-          <div class="detail"><span class="k">Out Power</span><span id="detail-out-power">--</span></div>
-          <div class="detail"><span class="k">Inv Consumption</span><span id="detail-inverter-consumption">--</span></div>
         </div>
       </ha-card>
       <style>
@@ -248,6 +252,15 @@ class CustomFlowCard extends HTMLElement {
           marker-end: url(#arrow-battery);
         }
 
+        .flow-line.flow-muted {
+          stroke: rgba(90, 104, 128, 0.45);
+          stroke-width: 1.8;
+          marker-end: none;
+          opacity: 0.85;
+          animation: none;
+          filter: none;
+        }
+
         .flow-line.active {
           opacity: 0.95;
           stroke-width: 3.2;
@@ -299,12 +312,11 @@ class CustomFlowCard extends HTMLElement {
         }
 
         .value {
-          font-size: 0.64rem;
+          font-size: 0.62rem;
           line-height: 0.8rem;
           opacity: 0.95;
-          white-space: nowrap;
+          white-space: pre-line;
           overflow: hidden;
-          text-overflow: ellipsis;
           max-width: 92%;
           color: var(--flow-text);
         }
@@ -317,6 +329,31 @@ class CustomFlowCard extends HTMLElement {
 
         #value-battery {
           white-space: normal;
+        }
+
+        .device-block {
+          position: absolute;
+          left: var(--x);
+          top: var(--y);
+          transform: translate(-50%, -50%);
+          z-index: 2;
+          width: 112px;
+          min-height: 30px;
+          padding: 4px 7px;
+          border-radius: 8px;
+          border: 1px solid var(--flow-border);
+          background: var(--flow-detail-bg);
+          color: var(--flow-text);
+          box-sizing: border-box;
+          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .device-name {
+          font-size: 0.62rem;
+          line-height: 0.78rem;
         }
 
         .flow-status {
@@ -479,6 +516,17 @@ class CustomFlowCard extends HTMLElement {
           #node-inverter { --x: 50%; --y: 50%; }
           #node-battery { --x: 50%; --y: 82%; }
           #node-home { --x: 84%; --y: 50%; }
+          #device-block-1,
+          #device-block-2,
+          #device-block-3 {
+            display: none;
+          }
+          #line-mains-branch,
+          #line-branch-device-1,
+          #line-branch-device-2,
+          #line-branch-device-3 {
+            display: none;
+          }
 
           .details {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -519,6 +567,10 @@ class CustomFlowCard extends HTMLElement {
     const batteryPercent = this.readNumber(entities.battery_percent);
     const batteryVoltage = this.readNumber(entities.battery_voltage);
     const chargingCurrent = this.readNumber(entities.charging_current);
+    const mainsCurrent = this.readNumber(entities.grid_current);
+    const mainsVoltage = this.readNumber(entities.grid_voltage);
+    const loadCurrent = this.readNumber(entities.load_current);
+    const loadPercent = this.readNumber(entities.details_load_percentage);
 
     const loadDemand = Number.isFinite(loadPower) && loadPower > 0 ? loadPower : inverterOutputPower;
     const mainsInputPower = Math.max(0, rawGridPower);
@@ -542,15 +594,24 @@ class CustomFlowCard extends HTMLElement {
     this.setIcon("icon-home", icons.home || "mdi:home-lightning-bolt");
     this.setIcon("icon-solar", icons.solar || "mdi:solar-power");
 
-    this.setText("value-grid", mainsSupplying ? this.formatPower(mainsInputPower) : "Cutoff");
-    this.setText("value-inverter", this.formatPower(inverterOutputPower));
+    this.setText(
+      "value-grid",
+      mainsSupplying
+        ? `${this.formatPower(mainsInputPower)}\n${this.formatNumber(mainsVoltage, 0, "V")} | ${this.formatNumber(mainsCurrent, 2, "A")}`
+        : "Cutoff"
+    );
+    this.setText("value-inverter", `${this.formatPower(inverterOutputPower)}\nCons ${this.formatPower(inverterConsumptionPower)}`);
     this.setText(
       "value-battery",
       this.formatBatteryNodeValue(batteryState, batteryToLoad, batteryChargingPower, batteryPercent)
     );
-    this.setText("value-home", this.formatPower(loadDemand));
-    this.setText("value-solar", this.formatPower(solarSupplyPower));
+    this.setText(
+      "value-home",
+      `${this.formatPower(loadDemand)}\n${this.formatNumber(loadCurrent, 2, "A")} | ${this.formatPercent(loadPercent)}`
+    );
+    this.setText("value-solar", `${this.formatPower(solarSupplyPower)}\n${this.formatNumber(this.readNumber(entities.solar_current), 2, "A")}`);
     this.updateSolarCurrentGraph(entities.solar_current);
+    this.updateBranchDevices(cfg.branch_devices);
 
     this.setDetails(entities, gridResult, loadResult, solarResult, batteryPower, rawGridPower, inverterOutputPower, inverterConsumptionPower);
     this.updateGatewayStatus(entities);
@@ -871,6 +932,13 @@ class CustomFlowCard extends HTMLElement {
     return { value: NaN, label: "" };
   }
 
+  updateBranchDevices(devices) {
+    const list = Array.isArray(devices) ? devices : [];
+    this.setText("device-name-1", list[0] || "Airconditioner");
+    this.setText("device-name-2", list[1] || "Washing machine");
+    this.setText("device-name-3", list[2] || "Remaining untracked");
+  }
+
   resolvePowerWithFormula(powerEntity, currentEntity, voltageEntity, fallbackVoltageEntity) {
     if (powerEntity) {
       return {
@@ -930,6 +998,16 @@ class CustomFlowCard extends HTMLElement {
     }
     const bounded = Math.max(0, Math.min(100, Math.round(value)));
     return `${bounded}%`;
+  }
+
+  formatPercent(value) {
+    if (!Number.isFinite(value)) return "--%";
+    return `${Math.max(0, Math.round(value))}%`;
+  }
+
+  formatNumber(value, decimals, unit) {
+    if (!Number.isFinite(value)) return `--${unit ? ` ${unit}` : ""}`;
+    return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
   }
 
   pickBatteryIcon(percent) {
