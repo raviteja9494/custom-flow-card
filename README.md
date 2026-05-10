@@ -97,7 +97,7 @@ You can still use YAML for advanced keys like custom icons.
 - `entities.load_power` (optional): Direct load power in W/kW.
 - `entities.load_current` + `entities.load_voltage` (recommended): card computes load power as `A x V`.
 - `entities.solar_power` (optional): Direct solar power in W/kW.
-- `entities.solar_current` + voltage fallback: direct `entities.solar_voltage` is best. Without it, the card uses healthy mains/grid voltage, then battery voltage during mains cutoff, and only uses low mains/grid voltage as a last resort.
+- `entities.solar_current` + voltage fallback: direct `entities.solar_voltage` is best. If that is missing, the card uses `entities.battery_voltage`. It does not use mains/grid voltage for inverter-side solar current math.
 - `entities.battery_percent` (optional): Battery percentage label and icon.
 - `entities.battery_voltage` (optional): Extra battery metric label.
 - `entities.charging_current` (recommended): Battery charging current. Prevents the card from guessing battery charging from balance alone.

@@ -843,28 +843,9 @@ class CustomFlowCard extends HTMLElement {
       return { value: directSolarVoltage, label: "solar" };
     }
 
-    const threshold = Number.isFinite(Number(gridOnlineVoltageMin)) ? Number(gridOnlineVoltageMin) : 90;
-    const mainsVoltage = this.readNumber(entities.mains_voltage);
-    if (Number.isFinite(mainsVoltage) && mainsVoltage >= threshold) {
-      return { value: mainsVoltage, label: "mains" };
-    }
-
-    const gridVoltage = this.readNumber(entities.grid_voltage);
-    if (!Number.isFinite(mainsVoltage) && Number.isFinite(gridVoltage) && gridVoltage >= threshold) {
-      return { value: gridVoltage, label: "grid" };
-    }
-
     const batteryVoltage = this.readNumber(entities.battery_voltage);
     if (Number.isFinite(batteryVoltage) && batteryVoltage > 0) {
       return { value: batteryVoltage, label: "battery" };
-    }
-
-    if (Number.isFinite(mainsVoltage) && mainsVoltage > 0) {
-      return { value: mainsVoltage, label: "low mains" };
-    }
-
-    if (Number.isFinite(gridVoltage) && gridVoltage > 0) {
-      return { value: gridVoltage, label: "low grid" };
     }
 
     return { value: NaN, label: "" };
