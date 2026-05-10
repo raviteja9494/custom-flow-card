@@ -86,12 +86,15 @@ class CustomFlowCard extends HTMLElement {
               <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="6.2" refY="3.5" orient="auto">
                 <path d="M0,0 L7,3.5 L0,7 z" fill="var(--flow-arrow)"></path>
               </marker>
+              <marker id="arrow-battery" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+                <path d="M0,0 L9,4.5 L0,9 z" fill="var(--flow-arrow)"></path>
+              </marker>
             </defs>
 
-            <line id="line-grid-inverter" x1="20" y1="50" x2="50" y2="50" class="flow-line"></line>
-            <line id="line-solar-inverter" x1="50" y1="20" x2="50" y2="42" class="flow-line"></line>
-            <line id="line-battery-inverter" x1="50" y1="58" x2="50" y2="80" class="flow-line"></line>
-            <line id="line-inverter-home" x1="50" y1="50" x2="80" y2="50" class="flow-line"></line>
+            <path id="line-grid-inverter" d="M20,50 L42,50" class="flow-line"></path>
+            <path id="line-solar-inverter" d="M50,24 L50,42" class="flow-line"></path>
+            <path id="line-battery-inverter" d="M50,76 L50,58" class="flow-line flow-battery"></path>
+            <path id="line-inverter-home" d="M58,50 L80,50" class="flow-line"></path>
           </svg>
 
           <div id="node-grid" class="node node-grid" style="--x:20%;--y:50%;">
@@ -239,6 +242,10 @@ class CustomFlowCard extends HTMLElement {
           transition: opacity 0.25s ease, stroke-width 0.25s ease;
           opacity: 0.18;
           filter: drop-shadow(0 0 2px rgba(31, 157, 85, 0.45));
+        }
+
+        .flow-line.flow-battery {
+          marker-end: url(#arrow-battery);
         }
 
         .flow-line.active {
@@ -457,6 +464,14 @@ class CustomFlowCard extends HTMLElement {
           .wrapper {
             height: 292px;
             padding: 8px;
+          }
+
+          .flow-line {
+            stroke-width: 3.1;
+          }
+
+          .flow-line.active {
+            stroke-width: 3.5;
           }
 
           #node-grid { --x: 16%; --y: 50%; }
@@ -1010,26 +1025,24 @@ class CustomFlowCard extends HTMLElement {
   }
 
   applyFlow(id, active, reverse) {
-    const line = this.content.getElementById(id);
-    if (!line) {
+    const path = this.content.getElementById(id);
+    if (!path) {
       return;
     }
-    if (!line.dataset.baseX1) {
-      line.dataset.baseX1 = line.getAttribute("x1");
-      line.dataset.baseY1 = line.getAttribute("y1");
-      line.dataset.baseX2 = line.getAttribute("x2");
-      line.dataset.baseY2 = line.getAttribute("y2");
-    }
-
-    const x1 = line.dataset.baseX1;
-    const y1 = line.dataset.baseY1;
-    const x2 = line.dataset.baseX2;
-    const y2 = line.dataset.baseY2;
-    line.setAttribute("x1", reverse ? x2 : x1);
-    line.setAttribute("y1", reverse ? y2 : y1);
-    line.setAttribute("x2", reverse ? x1 : x2);
-    line.setAttribute("y2", reverse ? y1 : y2);
-    line.classList.toggle("active", Boolean(active));
+    const baseMap = {
+      "line-grid-inverter": "M20,50 L42,50",
+      "line-solar-inverter": "M50,24 L50,42",
+      "line-battery-inverter": "M50,76 L50,58",
+      "line-inverter-home": "M58,50 L80,50"
+    };
+    const reverseMap = {
+      "line-grid-inverter": "M42,50 L20,50",
+      "line-solar-inverter": "M50,42 L50,24",
+      "line-battery-inverter": "M50,58 L50,76",
+      "line-inverter-home": "M80,50 L58,50"
+    };
+    path.setAttribute("d", reverse ? reverseMap[id] || baseMap[id] : baseMap[id]);
+    path.classList.toggle("active", Boolean(active));
   }
 }
 
